@@ -53,6 +53,10 @@ jspm_packages/
 .env.test.local
 .env.production.local
 *.env.local
+.env.*.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
 
 # Vercel / Next.js
 .next/
