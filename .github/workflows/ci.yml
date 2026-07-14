@@ -16,7 +16,7 @@ jobs:
           node-version: 22
           cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Lint & Format Check
         run: npm run lint
       - name: Static Type Compilation Check
@@ -34,7 +34,6 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
       - name: Install Playwright System Dependencies Only

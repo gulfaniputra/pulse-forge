@@ -15,6 +15,7 @@ app.get('/health', (c) => {
 });
 
 // Type cast to completely bypass Next.js 15 strict signature constraints
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handler = handle(app) as any;
 
 // Export all HTTP method handlers Next.js App Router expects to handle routing smoothly
