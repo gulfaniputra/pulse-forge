@@ -1,5 +1,5 @@
 {
-  "id": "746d003c-0c2f-4861-ae14-b948b7fc2297",
+  "id": "374f69d3-fa04-48fa-9a19-88ff2b2eb86b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -133,8 +133,16 @@
           "primaryKey": false,
           "notNull": false
         },
-        "is_active": {
-          "name": "is_active",
+        "type": {
+          "name": "type",
+          "type": "flag_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'boolean'"
+        },
+        "is_enabled": {
+          "name": "is_enabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -145,7 +153,7 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{\"rules\":[]}'::jsonb"
+          "default": "'{\"rules\":[],\"defaultVariant\":false}'::jsonb"
         },
         "environment": {
           "name": "environment",
@@ -170,8 +178,8 @@
         }
       },
       "indexes": {
-        "flags_tenant_key_idx": {
-          "name": "flags_tenant_key_idx",
+        "tenant_key_env_unique_idx": {
+          "name": "tenant_key_env_unique_idx",
           "columns": [
             {
               "expression": "tenant_id",
@@ -184,9 +192,15 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "environment",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -351,7 +365,16 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.flag_type": {
+      "name": "flag_type",
+      "schema": "public",
+      "values": [
+        "boolean",
+        "multivariate"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

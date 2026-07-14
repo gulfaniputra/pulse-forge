@@ -2,14 +2,20 @@ import {
   boolean,
   index,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { type FeatureFlagTargeting } from './types';
 
-// Tenants for complete multi-tenant data isolation
+// Define Flag Type Enum (Boolean toggles vs. Multivariate strings/JSON configs)
+export const flagTypeEnum = pgEnum('flag_type', ['boolean', 'multivariate']);
+
+// Tenants table (Provides complete multi-tenant data isolation)
 export const tenants = pgTable('tenants', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -18,7 +24,7 @@ export const tenants = pgTable('tenants', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Users belonging to Tenants
+// Users table
 export const users = pgTable(
   'users',
   {
@@ -33,7 +39,7 @@ export const users = pgTable(
   (table) => [index('users_tenant_idx').on(table.tenantId)],
 );
 
-// Feature Flags configuration with embedded targeting rules
+// Isolated feature flags table (unified & optimized)
 export const featureFlags = pgTable(
   'feature_flags',
   {
@@ -41,21 +47,26 @@ export const featureFlags = pgTable(
     tenantId: uuid('tenant_id')
       .references(() => tenants.id, { onDelete: 'cascade' })
       .notNull(),
-    key: varchar('key', { length: 100 }).notNull(), // e.g., "new-payment-gateway"
+    key: varchar('key', { length: 100 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    isActive: boolean('is_active').default(false).notNull(),
+    type: flagTypeEnum('type').default('boolean').notNull(),
+    isEnabled: boolean('is_enabled').default(false).notNull(),
 
-    // Rules payload: handles percentage rollouts, user targeting arrays, & country white-lists
-    // Schema: { rules: Array<{ type: 'percentage' | 'attribute', value: any }> }
-    targetingRules: jsonb('targeting_rules').default({ rules: [] }).notNull(),
+    // Type-safe JSONB field for ultra-fast edge memory execution loops
+    targetingRules: jsonb('targeting_rules')
+      .$type<FeatureFlagTargeting>()
+      .default({ rules: [], defaultVariant: false })
+      .notNull(),
 
     environment: varchar('environment', { length: 50 }).default('production').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
-    index('flags_tenant_key_idx').on(table.tenantId, table.key), // Compound index for fast edge resolution
+    // Multi-tenant unique edge constraint
+    // A flag key must be unique within a specific tenant & a specific environment (e.g. dev vs prod)
+    uniqueIndex('tenant_key_env_unique_idx').on(table.tenantId, table.key, table.environment),
   ],
 );
 
@@ -68,15 +79,12 @@ export const analyticsEvents = pgTable(
       .references(() => tenants.id, { onDelete: 'cascade' })
       .notNull(),
     flagKey: varchar('flag_key', { length: 100 }).notNull(),
-    distinctId: varchar('distinct_id', { length: 255 }).notNull(), // Unique client identifier
-    evaluation: varchar('evaluation', { length: 255 }).notNull(), // e.g., "true", "false", "variant-a"
+    distinctId: varchar('distinct_id', { length: 255 }).notNull(),
+    evaluation: varchar('evaluation', { length: 255 }).notNull(),
 
     // Contextual attributes passed during evaluation (browser, country, device)
     context: jsonb('context').default({}).notNull(),
-
     timestamp: timestamp('timestamp').defaultNow().notNull(),
   },
-  (table) => [
-    index('analytics_tenant_timestamp_idx').on(table.tenantId, table.timestamp), // Optimized for time-series dashboard charts
-  ],
+  (table) => [index('analytics_tenant_timestamp_idx').on(table.tenantId, table.timestamp)],
 );
