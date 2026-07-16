@@ -47,25 +47,27 @@ jspm_packages/
 
 # dotenv environment variables files
 .env
-.env.developer
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env.local
-.env.*.local
+.env.developer
+.env.production
+.env.development
+.env.test
+
+# Cloudflare Workers/Wrangler local development
+.wrangler/
+.dev.vars
 
 # TypeScript incremental build cache
 *.tsbuildinfo
 
-# Vercel / Next.js
+# Vercel/Next.js
 .next/
 out/
 
-# Drizzle / DB Migrations (Ignore introspected artifacts if any, keep schema changes)
+# Drizzle/db migrations (Ignores internal CLI cache & tracks the actual schema migrations)
 .drizzle/
 
-# Testing (Vitest & Playwright)
+# Testing (e.g. Vitest & Playwright)
 .vitest-result/
 test-results/
 playwright-report/

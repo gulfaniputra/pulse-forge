@@ -1,11 +1,17 @@
-import { db } from './index';
-import { featureFlags, tenants, users } from './schema';
+import { loadEnvConfig } from '@next/env';
+
+// 1. Immediately inject environment variables into process.env before anything else evaluates
+loadEnvConfig(process.cwd());
 
 async function main() {
   console.log('Starting database seeding pipeline...');
 
+  // 2. Dynamically import database context now that process.env is safely populated
+  const { db } = await import('./index');
+  const { featureFlags, tenants, users } = await import('./schema');
+
   // Clean out existing data to ensure idempotency
-  // Cascade deletes on the schema will automatically wipe child flags & users
+  // Cascade deletes on your database schema will automatically wipe child flags & users
   await db.delete(tenants);
 
   // Provision a core Tenant

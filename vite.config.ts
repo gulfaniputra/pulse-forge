@@ -1,17 +1,20 @@
-import path from 'node:path';
+import { loadEnvConfig } from '@next/env';
+import path from 'path';
 import { defineConfig } from 'vitest/config';
 
+// Load env variables from the project root
+loadEnvConfig(process.cwd());
+
 export default defineConfig({
-  test: {
-    environment: 'node',
-    globals: true,
-    include: ['tests/integration/**/*.test.ts'],
-    // Ensures database integration tests don't step on each other's state
-    fileParallelism: false,
-  },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      // Leverages process.cwd() to guarantee safe execution across both CJS & ESM runtimes
+      '@': path.resolve(process.cwd(), './src'),
     },
+  },
+  test: {
+    environment: 'node',
+    // Use global test functions (no need to import describe/it/expect)
+    globals: true,
   },
 });
