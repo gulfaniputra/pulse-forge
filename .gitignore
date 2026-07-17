@@ -66,13 +66,15 @@ out/
 
 # Drizzle/db migrations (Ignores internal CLI cache & tracks the actual schema migrations)
 .drizzle/
+drizzle/meta/*.json
 
-# Testing (e.g. Vitest & Playwright)
+# Testing (Vitest & Playwright)
 .vitest-result/
 test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+.last-run.json
 
 # IDEs & editors
 .idea/

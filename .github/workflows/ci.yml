@@ -44,11 +44,21 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
+
       - name: Install Playwright Browsers & System Dependencies
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
       - name: Install Playwright System Dependencies Only
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
-      - name: Run Playwright E2E Suite
-        run: npm run test:e2e
+
+      - name: Build Next.js application
+        run: npm run build
+
+      - name: Start server and run E2E tests
+        run: |
+          npm run start &
+          echo "Waiting for server to be ready..."
+          while ! curl -s http://localhost:3000 > /dev/null; do sleep 1; done
+          npm run test:e2e
