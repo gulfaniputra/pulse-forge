@@ -10,8 +10,23 @@ jobs:
   validate:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/testdb
       NODE_ENV: test
 
     steps:
@@ -37,10 +52,21 @@ jobs:
       - name: Wait for DB
         run: |
           for i in {1..10}; do
-            node -e "require('pg').Client({ connectionString: process.env.DATABASE_URL }).connect().then(c=>c.end())" && exit 0
+            node -e "
+              const { Client } = require('pg');
+              const client = new Client({
+                connectionString: process.env.DATABASE_URL,
+              });
+
+              client.connect()
+                .then(() => client.end())
+                .catch(() => process.exit(1));
+            " && exit 0
+
             echo "Waiting for DB..."
             sleep 2
           done
+
           echo "DB not reachable"
           exit 1
 
@@ -49,8 +75,6 @@ jobs:
 
       - name: Run Integration Tests
         run: npm run test:integration
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # --- Playwright caching ---
       - name: Cache Playwright
