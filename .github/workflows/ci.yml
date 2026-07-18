@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
       NODE_ENV: test
 
     steps:
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -33,12 +33,26 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # --- Ensure DB is reachable before migrations ---
+      - name: Wait for DB
+        run: |
+          for i in {1..10}; do
+            node -e "require('pg').Client({ connectionString: process.env.DATABASE_URL }).connect().then(c=>c.end())" && exit 0
+            echo "Waiting for DB..."
+            sleep 2
+          done
+          echo "DB not reachable"
+          exit 1
+
       - name: Run Database Migrations
         run: npm run db:migrate
 
       - name: Run Integration Tests
         run: npm run test:integration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+      # --- Playwright caching ---
       - name: Cache Playwright
         id: playwright-cache
         uses: actions/cache@v5
@@ -59,8 +73,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      # --- Robust E2E execution ---
       - name: Start server and run E2E tests
         run: |
+          set -e
+
           npm run start &
+          SERVER_PID=$!
+
+          # Fail fast if server crashes early
+          sleep 2
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server failed to start"
+            exit 1
+          fi
+
           npx wait-on http://localhost:3000 --timeout 60000
+
           npm run test:e2e
+
+          kill $SERVER_PID
