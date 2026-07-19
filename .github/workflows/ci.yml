@@ -36,7 +36,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
 
       - name: Install Dependencies
@@ -48,35 +48,19 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # --- Ensure DB is reachable before migrations ---
       - name: Wait for DB
         run: |
-          for i in {1..10}; do
-            node -e "
-              const { Client } = require('pg');
-              const client = new Client({
-                connectionString: process.env.DATABASE_URL,
-              });
-
-              client.connect()
-                .then(() => client.end())
-                .catch(() => process.exit(1));
-            " && exit 0
-
-            echo "Waiting for DB..."
+          until nc -z localhost 5432; do
+            echo "Waiting for PostgreSQL to accept connections on port 5432..."
             sleep 2
           done
-
-          echo "DB not reachable"
-          exit 1
 
       - name: Run Database Migrations
         run: npm run db:migrate
 
-      - name: Run Integration Tests
+      - name: Run Route Integration Suite
         run: npm run test:integration
 
-      # --- Playwright caching ---
       - name: Cache Playwright
         id: playwright-cache
         uses: actions/cache@v5
@@ -97,11 +81,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      # --- Robust E2E execution ---
       - name: Start server and run E2E tests
         run: |
           set -e
-
           npm run start &
           SERVER_PID=$!
 
@@ -113,7 +95,5 @@ jobs:
           fi
 
           npx wait-on http://localhost:3000 --timeout 60000
-
           npm run test:e2e
-
           kill $SERVER_PID
