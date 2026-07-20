@@ -58,7 +58,7 @@ app.post('/v1/evaluate', async (c) => {
   // Processes targeting rules instantly in-memory without extra database round-trips
   const evaluatedValue = evaluateTargetingRules(flag.targetingRules, context);
 
-  // Spawns a hot, active background promise immediately
+  // Spawns a hot & active background promise immediately
   const logIngestionTask = db
     .insert(analyticsEvents)
     .values({
@@ -98,4 +98,3 @@ export {
 };
 
 export type AppType = typeof app;
-export default app;
