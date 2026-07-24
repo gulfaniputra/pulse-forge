@@ -40,7 +40,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
@@ -81,19 +81,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Start server and run E2E tests
-        run: |
-          set -e
-          npm run start &
-          SERVER_PID=$!
-
-          # Fail fast if server crashes early
-          sleep 2
-          if ! kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Server failed to start"
-            exit 1
-          fi
-
-          npx wait-on http://localhost:3000 --timeout 60000
-          npm run test:e2e
-          kill $SERVER_PID
+      - name: Run E2E tests
+        run: npm run test:e2e

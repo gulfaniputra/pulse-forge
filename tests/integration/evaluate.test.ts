@@ -1,6 +1,6 @@
-import app from '@/app/api/[[...route]]/route';
 import { db } from '@/db';
 import { analyticsEvents, featureFlags, tenants } from '@/db/schema';
+import { app } from '@/lib/hono-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 type HonoCtx = NonNullable<Parameters<typeof app.request>[3]>;
