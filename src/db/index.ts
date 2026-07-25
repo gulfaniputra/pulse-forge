@@ -8,8 +8,12 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is missing.');
 }
 
+const isEdge = process.env.NEXT_RUNTIME === 'edge';
+
 const isLocalPostgres =
-  process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
+  !isEdge &&
+  (process.env.DATABASE_URL.includes('localhost') ||
+    process.env.DATABASE_URL.includes('127.0.0.1'));
 
 export function extractClientType() {
   const dummyPool = {} as NeonPool;
