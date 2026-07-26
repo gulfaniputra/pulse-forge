@@ -1,29 +1,30 @@
 import { type AppType } from '@/lib/hono-app';
 import { hc } from 'hono/client';
 
+// Create a dummy client to extract its exact type
+const _dummyClient = hc<AppType>('');
+type HonoClient = typeof _dummyClient;
+
 /**
  * Instantiates the Hono RPC client safely across architectural boundaries
- * @param customFetch Optional custom fetch implementation (useful for Next.js revalidation/caching strategies)
+ * @param customFetch Optional custom fetch implementation for Next.js revalidation/caching strategies
  */
-export const createRpcClient = (customFetch?: typeof fetch) => {
+export const createRpcClient = (customFetch?: typeof fetch): HonoClient => {
   const isServer = typeof window === 'undefined';
 
-  // Fallback to localhost only if we are explicitly running outside production environments
   const defaultDevUrl = 'http://localhost:3000';
-  const baseUrl = isServer ? process.env.NEXT_PUBLIC_APP_URL || defaultDevUrl : ''; // Relative paths are perfectly safe for client-side browser execution
+  const baseUrl = isServer ? process.env.NEXT_PUBLIC_APP_URL || defaultDevUrl : '';
 
-  // Defensive sanity check for solo devs deploying to production environments
   if (isServer && process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_APP_URL) {
     console.warn(
       'CRITICAL: NEXT_PUBLIC_APP_URL is missing in production environment variables. Hono RPC server-side calls will misroute.',
     );
   }
 
+  // 2. Return the real client cast to the extracted type
   return hc<AppType>(baseUrl, {
-    // Handle internal binding requirements for edge runtimes with absolute type safety
     fetch: customFetch || ((...args: Parameters<typeof fetch>) => fetch(...args)),
-  });
+  }) as HonoClient;
 };
 
-// Export a singleton instance optimized for standard Client Component rendering loops
 export const clientRpc = createRpcClient();

@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { analyticsEvents, featureFlags } from '@/db/schema';
+import { analyticsEvents, featureFlags, tenants } from '@/db/schema';
 import { evaluateTargetingRules } from '@/lib/evaluator';
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -7,7 +7,6 @@ import { z } from 'zod';
 
 const app = new Hono().basePath('/api');
 
-// Health check
 app.get('/health', (c) => {
   return c.json({
     status: 'healthy',
@@ -67,6 +66,47 @@ app.post('/v1/evaluate', async (c) => {
     value: evaluatedValue,
     match: true,
   });
+});
+
+// GET /v1/flags endpoint
+const flagsQuerySchema = z.object({
+  tenantId: z.string().uuid(),
+  environment: z.string().min(1).max(50),
+});
+
+app.get('/v1/flags', async (c) => {
+  const query = c.req.query();
+  const parseResult = flagsQuerySchema.safeParse(query);
+  if (!parseResult.success) {
+    return c.json({ error: 'Bad Request', details: parseResult.error.errors }, 400);
+  }
+  const { tenantId, environment } = parseResult.data;
+
+  const tenant = await db.query.tenants.findFirst({
+    where: eq(tenants.id, tenantId),
+  });
+  if (!tenant) {
+    return c.json({ error: 'Tenant not found' }, 404);
+  }
+
+  const flags = await db.query.featureFlags.findMany({
+    where: and(eq(featureFlags.tenantId, tenantId), eq(featureFlags.environment, environment)),
+    orderBy: (flags, { desc }) => [desc(flags.updatedAt)],
+  });
+
+  // Return all fields the dashboard needs including `environment`
+  const result = flags.map((flag) => ({
+    id: flag.id,
+    key: flag.key,
+    name: flag.name,
+    description: flag.description,
+    type: flag.type,
+    isEnabled: flag.isEnabled,
+    environment: flag.environment, // ← now included
+    updatedAt: flag.updatedAt,
+  }));
+
+  return c.json(result);
 });
 
 export { app };

@@ -1,7 +1,20 @@
 import { db } from '@/db';
-import { featureFlags, tenants } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { tenants } from '@/db/schema';
+import { createRpcClient } from '@/lib/rpc';
+import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+
+// Match the shape returned by GET /v1/flags
+type ApiFlag = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  type: 'boolean' | 'multivariate';
+  isEnabled: boolean;
+  environment: string;
+  updatedAt: string;
+};
 
 interface PageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -10,7 +23,7 @@ interface PageProps {
 export default async function FlagsOverviewPage({ params }: PageProps) {
   const { tenantSlug } = await params;
 
-  // Resolve tenant context parameters
+  // Resolve tenant by slug (still uses direct DB – will be migrated later)
   const tenantRecord = await db.query.tenants.findFirst({
     where: eq(tenants.slug, tenantSlug),
   });
@@ -19,15 +32,22 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch flags matching tenant data boundaries
-  // For advanced server caching rules this can easily migrate to the `createRpcClient` mapping
-  const flags = await db.query.featureFlags.findMany({
-    where: and(
-      eq(featureFlags.tenantId, tenantRecord.id),
-      eq(featureFlags.environment, 'production'),
-    ),
-    orderBy: (flags, { desc }) => [desc(flags.updatedAt)],
+  // Fetch flags via Hono RPC client
+  // Temporarily cast to any – upgrade Hono later to restore full type safety
+  const client = createRpcClient() as any;
+  const response = await client.api.v1.flags.$get({
+    query: {
+      tenantId: tenantRecord.id,
+      environment: 'production',
+    },
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch flags: ${response.status}`);
+  }
+
+  // Cast the response to the known type
+  const flags = (await response.json()) as ApiFlag[];
 
   return (
     <div className="space-y-6">
@@ -50,9 +70,7 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
           </div>
         ) : (
           flags.map((flag) => {
-            // Critical Defensive Implementation:
-            // Stringify & pre-format timestamps directly on the server side.
-            // This cleanly isolates token formatting from client timezone discrepancies (e.g. WITA execution shifts)
+            // Date formatting on the server to avoid client-side discrepancies
             const lastUpdatedString = new Date(flag.updatedAt).toLocaleDateString('en-US', {
               dateStyle: 'medium',
               timeZone: 'UTC',
