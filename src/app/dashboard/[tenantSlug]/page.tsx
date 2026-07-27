@@ -33,8 +33,7 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
   }
 
   // Fetch flags via Hono RPC client
-  // Temporarily cast to any – upgrade Hono later to restore full type safety
-  const client = createRpcClient() as any;
+  const client = createRpcClient();
   const response = await client.api.v1.flags.$get({
     query: {
       tenantId: tenantRecord.id,
