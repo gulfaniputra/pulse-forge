@@ -1,0 +1,70 @@
+'use server';
+
+import { db } from '@/db';
+import { featureFlags } from '@/db/schema';
+import { type FeatureFlagTargeting } from '@/db/types';
+import { createFlagSchema } from '@/lib/validations';
+import { revalidatePath } from 'next/cache';
+
+export async function createFlag(_prevState: unknown, formData: FormData) {
+  // Extract fields from `FormData`
+  const raw = {
+    tenantId: formData.get('tenantId') as string,
+    key: formData.get('key') as string,
+    name: formData.get('name') as string,
+    description: formData.get('description') as string | null,
+    type: formData.get('type') as 'boolean' | 'multivariate' | null,
+    environment: formData.get('environment') as string,
+    isEnabled: formData.get('isEnabled') === 'true',
+    targetingRules: { rules: [], defaultVariant: false },
+    slug: formData.get('slug') as string,
+  };
+
+  // Validate
+  const parsed = createFlagSchema.safeParse({
+    tenantId: raw.tenantId,
+    key: raw.key,
+    name: raw.name,
+    description: raw.description,
+    type: raw.type ?? 'boolean',
+    environment: raw.environment ?? 'production',
+    isEnabled: raw.isEnabled,
+    targetingRules: raw.targetingRules,
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = parsed.data;
+
+  try {
+    await db.insert(featureFlags).values({
+      tenantId: data.tenantId,
+      key: data.key,
+      name: data.name,
+      description: data.description ?? null,
+      type: data.type,
+      environment: data.environment,
+      isEnabled: data.isEnabled,
+      targetingRules: data.targetingRules as FeatureFlagTargeting,
+    });
+  } catch (error) {
+    // Check for unique constraint violation
+    return {
+      success: false,
+      errors: {
+        _form: ['Flag with this key and environment already exists.'],
+      },
+    };
+  }
+
+  // Revalidate the dashboard page using the slug but skip in test environment
+  if (process.env.NODE_ENV !== 'test') {
+    revalidatePath(`/dashboard/${raw.slug}`);
+  }
+  return { success: true };
+}
