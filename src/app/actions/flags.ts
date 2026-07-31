@@ -7,7 +7,7 @@ import { createFlagSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 
 export async function createFlag(_prevState: unknown, formData: FormData) {
-  // Extract fields from `FormData`
+  // Extract all form fields
   const raw = {
     tenantId: formData.get('tenantId') as string,
     key: formData.get('key') as string,
@@ -16,11 +16,28 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     type: formData.get('type') as 'boolean' | 'multivariate' | null,
     environment: formData.get('environment') as string,
     isEnabled: formData.get('isEnabled') === 'true',
-    targetingRules: { rules: [], defaultVariant: false },
     slug: formData.get('slug') as string,
   };
 
-  // Validate
+  // Parse `targetingRules` from JSON string if provided
+  const targetingRulesRaw = formData.get('targetingRules') as string | null;
+  let targetingRulesParsed;
+  if (targetingRulesRaw) {
+    try {
+      targetingRulesParsed = JSON.parse(targetingRulesRaw);
+    } catch {
+      return {
+        success: false,
+        errors: {
+          targetingRules: ['Invalid JSON format. Please provide a valid JSON object.'],
+        },
+      };
+    }
+  } else {
+    targetingRulesParsed = { rules: [], defaultVariant: false };
+  }
+
+  // Validate with Zod
   const parsed = createFlagSchema.safeParse({
     tenantId: raw.tenantId,
     key: raw.key,
@@ -29,7 +46,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     type: raw.type ?? 'boolean',
     environment: raw.environment ?? 'production',
     isEnabled: raw.isEnabled,
-    targetingRules: raw.targetingRules,
+    targetingRules: targetingRulesParsed, // <-- use parsed value
   });
 
   if (!parsed.success) {
@@ -53,7 +70,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
       targetingRules: data.targetingRules as FeatureFlagTargeting,
     });
   } catch (error) {
-    // Check for unique constraint violation
+    // Unique constraint violation
     return {
       success: false,
       errors: {
@@ -62,9 +79,10 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     };
   }
 
-  // Revalidate the dashboard page using the slug but skip in test environment
+  // Revalidate
   if (process.env.NODE_ENV !== 'test') {
     revalidatePath(`/dashboard/${raw.slug}`);
   }
+
   return { success: true };
 }

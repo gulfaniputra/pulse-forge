@@ -14,5 +14,6 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     exclude: ['**/e2e/**', '**/node_modules/**', '**/dist/**'],
+    fileParallelism: false,
   },
 });

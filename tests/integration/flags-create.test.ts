@@ -1,4 +1,3 @@
-// tests/integration/flags-create.test.ts
 import { createFlag } from '@/app/actions/flags';
 import { db } from '@/db';
 import { featureFlags, tenants } from '@/db/schema';
@@ -82,5 +81,71 @@ describe('createFlag server action', () => {
     const errors = result.errors as any;
     expect(errors._form).toBeDefined();
     expect(errors._form[0]).toMatch(/already exists/i);
+  });
+
+  it('should create a flag with valid targeting rules (JSON)', async () => {
+    const validRules = {
+      rules: [
+        {
+          id: 'rule1',
+          name: 'Beta users',
+          conditions: [{ attribute: 'email', operator: 'contains', value: '@beta.com' }],
+          variant: true,
+        },
+      ],
+      defaultVariant: false,
+    };
+
+    const formData = new FormData();
+    formData.append('tenantId', tenantId);
+    formData.append('slug', tenantSlug);
+    formData.append('key', 'feature-y');
+    formData.append('name', 'Feature Y');
+    formData.append('type', 'boolean');
+    formData.append('environment', 'production');
+    formData.append('targetingRules', JSON.stringify(validRules));
+
+    const result = await createFlag(null, formData);
+    expect(result.success).toBe(true);
+
+    const [flag] = await db
+      .select()
+      .from(featureFlags)
+      .where(eq(featureFlags.key, 'feature-y'))
+      .limit(1);
+    expect(flag).toBeDefined();
+    expect(flag.targetingRules).toEqual(validRules);
+  });
+
+  it('should reject invalid JSON in targetingRules', async () => {
+    const formData = new FormData();
+    formData.append('tenantId', tenantId);
+    formData.append('slug', tenantSlug);
+    formData.append('key', 'feature-invalid');
+    formData.append('name', 'Invalid');
+    formData.append('targetingRules', '{ not json }');
+
+    const result = await createFlag(null, formData);
+    expect(result.success).toBe(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errors = result.errors as any;
+    expect(errors.targetingRules).toBeDefined();
+  });
+
+  it('should reject targetingRules that do not match the schema', async () => {
+    // `rules` must be an array. Passing a string triggers Zod error.
+    const invalidRules = { rules: 'not an array' };
+    const formData = new FormData();
+    formData.append('tenantId', tenantId);
+    formData.append('slug', tenantSlug);
+    formData.append('key', 'feature-invalid2');
+    formData.append('name', 'Invalid2');
+    formData.append('targetingRules', JSON.stringify(invalidRules));
+
+    const result = await createFlag(null, formData);
+    expect(result.success).toBe(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errors = result.errors as any;
+    expect(errors.targetingRules).toBeDefined();
   });
 });
