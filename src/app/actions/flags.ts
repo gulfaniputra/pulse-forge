@@ -1,10 +1,48 @@
 'use server';
 
 import { db } from '@/db';
-import { featureFlags } from '@/db/schema';
+import { featureFlags, tenants } from '@/db/schema';
 import { type FeatureFlagTargeting } from '@/db/types';
 import { createFlagSchema } from '@/lib/validations';
+import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Extract Postgres error code from various error shapes.
+ * Covers top‑level, `cause`, & `original` properties.
+ */
+function getPostgresErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+
+  // Top‑level code (pg, Neon serverless)
+  if ('code' in error && typeof (error as { code: unknown }).code === 'string') {
+    return (error as { code: string }).code;
+  }
+
+  // Nested inside `cause` (some Drizzle wrappers)
+  const cause = (error as { cause?: unknown }).cause;
+  if (
+    cause &&
+    typeof cause === 'object' &&
+    'code' in cause &&
+    typeof (cause as { code: unknown }).code === 'string'
+  ) {
+    return (cause as { code: string }).code;
+  }
+
+  // Nested inside `original` (older drivers)
+  const original = (error as { original?: unknown }).original;
+  if (
+    original &&
+    typeof original === 'object' &&
+    'code' in original &&
+    typeof (original as { code: unknown }).code === 'string'
+  ) {
+    return (original as { code: string }).code;
+  }
+
+  return undefined;
+}
 
 export async function createFlag(_prevState: unknown, formData: FormData) {
   // Extract all form fields
@@ -19,7 +57,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     slug: formData.get('slug') as string,
   };
 
-  // Parse `targetingRules` from JSON string if provided
+  // Parse `targetingRules` JSON
   const targetingRulesRaw = formData.get('targetingRules') as string | null;
   let targetingRulesParsed;
   if (targetingRulesRaw) {
@@ -37,7 +75,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     targetingRulesParsed = { rules: [], defaultVariant: false };
   }
 
-  // Validate with Zod
+  // Zod validation
   const parsed = createFlagSchema.safeParse({
     tenantId: raw.tenantId,
     key: raw.key,
@@ -46,7 +84,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     type: raw.type ?? 'boolean',
     environment: raw.environment ?? 'production',
     isEnabled: raw.isEnabled,
-    targetingRules: targetingRulesParsed, // <-- use parsed value
+    targetingRules: targetingRulesParsed,
   });
 
   if (!parsed.success) {
@@ -58,6 +96,18 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
 
   const data = parsed.data;
 
+  // Verify tenant exists before attempting insert
+  const tenantExists = await db.query.tenants.findFirst({
+    where: eq(tenants.id, data.tenantId),
+  });
+  if (!tenantExists) {
+    return {
+      success: false,
+      errors: { _form: ['Invalid tenant ID.'] },
+    };
+  }
+
+  // Insert with robust error handling
   try {
     await db.insert(featureFlags).values({
       tenantId: data.tenantId,
@@ -70,12 +120,16 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
       targetingRules: data.targetingRules as FeatureFlagTargeting,
     });
   } catch (error) {
-    // Unique constraint violation
+    const errorCode = getPostgresErrorCode(error);
+    if (errorCode === '23505') {
+      return {
+        success: false,
+        errors: { _form: ['Flag with this key and environment already exists.'] },
+      };
+    }
     return {
       success: false,
-      errors: {
-        _form: ['Flag with this key and environment already exists.'],
-      },
+      errors: { _form: ['An unexpected error occurred. Please try again.'] },
     };
   }
 
