@@ -1,7 +1,8 @@
 import { db } from '@/db';
 import { analyticsEvents, featureFlags, tenants } from '@/db/schema';
 import { evaluateTargetingRules } from '@/lib/evaluator';
-import { and, eq } from 'drizzle-orm';
+import { metricsQuerySchema } from '@/lib/validations';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -100,6 +101,54 @@ const app = new Hono()
       environment: flag.environment,
       updatedAt: flag.updatedAt,
     }));
+
+    return c.json(result);
+  })
+  .get('/v1/metrics', async (c) => {
+    const query = c.req.query();
+    const parseResult = metricsQuerySchema.safeParse(query);
+    if (!parseResult.success) {
+      return c.json({ error: 'Bad Request', details: parseResult.error.errors }, 400);
+    }
+
+    const { tenantId, environment, flagKey } = parseResult.data;
+
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, tenantId),
+    });
+    if (!tenant) {
+      return c.json({ error: 'Tenant not found' }, 404);
+    }
+
+    const flagKeysResult = await db
+      .select({ key: featureFlags.key })
+      .from(featureFlags)
+      .where(and(eq(featureFlags.tenantId, tenantId), eq(featureFlags.environment, environment)));
+
+    const flagKeys = flagKeysResult.map((row) => row.key);
+    if (flagKeys.length === 0) {
+      return c.json([]);
+    }
+
+    const conditions = [
+      eq(analyticsEvents.tenantId, tenantId),
+      inArray(analyticsEvents.flagKey, flagKeys),
+      sql`${analyticsEvents.timestamp} > NOW() - INTERVAL '7 days'`,
+    ];
+    if (flagKey) {
+      conditions.push(eq(analyticsEvents.flagKey, flagKey));
+    }
+
+    const result = await db
+      .select({
+        day: sql`DATE_TRUNC('day', ${analyticsEvents.timestamp})`.as('day'),
+        flagKey: analyticsEvents.flagKey,
+        count: sql<number>`COUNT(*)`.as('count'),
+      })
+      .from(analyticsEvents)
+      .where(and(...conditions))
+      .groupBy(sql`DATE_TRUNC('day', ${analyticsEvents.timestamp})`, analyticsEvents.flagKey)
+      .orderBy(sql`DATE_TRUNC('day', ${analyticsEvents.timestamp})`, analyticsEvents.flagKey);
 
     return c.json(result);
   });

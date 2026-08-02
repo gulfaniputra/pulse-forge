@@ -18,3 +18,11 @@ export const createFlagSchema = z.object({
 });
 
 export type CreateFlagInput = z.infer<typeof createFlagSchema>;
+
+export const metricsQuerySchema = z.object({
+  tenantId: z.string().uuid(),
+  environment: z.string().min(1).max(50),
+  flagKey: z.string().min(1).max(100).optional(),
+});
+
+export type MetricsQueryInput = z.infer<typeof metricsQuerySchema>;

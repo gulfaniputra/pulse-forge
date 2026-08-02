@@ -1,4 +1,5 @@
 import { CreateFlagForm } from '@/components/CreateFlagForm';
+import { FlagMetricsChart } from '@/components/FlagMetricsChart';
 import { db } from '@/db';
 import { tenants } from '@/db/schema';
 import { createRpcClient } from '@/lib/rpc';
@@ -57,6 +58,13 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
       </div>
 
       <CreateFlagForm tenantId={tenantRecord.id} tenantSlug={tenantSlug} />
+
+      <div className="border border-slate-800 rounded-xl p-5 bg-slate-950/30">
+        <h2 className="text-lg font-semibold text-slate-200 mb-4">
+          Evaluation Activity (last 7 days)
+        </h2>
+        <FlagMetricsChart tenantId={tenantRecord.id} environment="production" />
+      </div>
 
       <div className="grid gap-4">
         {flags.length === 0 ? (
