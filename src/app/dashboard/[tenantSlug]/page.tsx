@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { tenants } from '@/db/schema';
 import { createRpcClient } from '@/lib/rpc';
 import { eq } from 'drizzle-orm';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 type ApiFlag = {
@@ -106,8 +107,14 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-4">
+                  <Link
+                    href={`/dashboard/${tenantSlug}/flags/${flag.id}/edit`}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    Edit
+                  </Link>
                   <span
-                    className={`h-2 w-2 rounded-full ${
+                    className={`h-2 w-2 rounded-full shrink-0 ${
                       flag.isEnabled
                         ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
                         : 'bg-slate-600'

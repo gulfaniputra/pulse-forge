@@ -26,3 +26,20 @@ export const metricsQuerySchema = z.object({
 });
 
 export type MetricsQueryInput = z.infer<typeof metricsQuerySchema>;
+
+export const updateFlagSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().optional().nullable(),
+  type: z.enum(['boolean', 'multivariate']).optional(),
+  isEnabled: z.boolean().optional(),
+  targetingRules: z
+    .object({
+      rules: z.array(z.any()).default([]),
+      defaultVariant: z.any().default(false),
+    })
+    .optional(),
+});
+
+export type UpdateFlagInput = z.infer<typeof updateFlagSchema>;
