@@ -47,7 +47,8 @@ const app = new Hono()
       return c.json({ value: false, reason: !flag ? 'FLAG_NOT_FOUND' : 'FLAG_DISABLED' });
     }
 
-    const evaluatedValue = evaluateTargetingRules(flag.targetingRules, context);
+    const evaluationContext = { ...context, distinctId };
+    const evaluatedValue = evaluateTargetingRules(flag.targetingRules, evaluationContext);
 
     const logIngestionTask = db
       .insert(analyticsEvents)
