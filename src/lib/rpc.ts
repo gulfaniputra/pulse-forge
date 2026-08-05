@@ -14,8 +14,21 @@ export const createRpcClient = (customFetch?: typeof fetch): HonoClient => {
     );
   }
 
+  const fetchWithAuth: typeof fetch = (input, init) => {
+    const headers = new Headers(init?.headers);
+
+    if (isServer && process.env.API_KEY) {
+      headers.set('Authorization', `Bearer ${process.env.API_KEY}`);
+    }
+
+    return fetch(input, {
+      ...init,
+      headers,
+    });
+  };
+
   return hc<AppType>(baseUrl, {
-    fetch: customFetch || ((...args: Parameters<typeof fetch>) => fetch(...args)),
+    fetch: customFetch || fetchWithAuth,
   });
 };
 

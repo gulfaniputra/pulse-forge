@@ -3,6 +3,10 @@ import { featureFlags, tenants } from '@/db/schema';
 import { app } from '@/lib/hono-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+const authHeaders = {
+  Authorization: `Bearer ${process.env.API_KEY}`,
+};
+
 describe('GET /api/v1/flags', () => {
   let tenantId: string;
 
@@ -16,7 +20,7 @@ describe('GET /api/v1/flags', () => {
       .returning();
     tenantId = tenant.id;
 
-    // Seed flags in two environments to verify filtering
+    // Seed flags in two environments to verify filtering.
     await db.insert(featureFlags).values([
       {
         tenantId,
@@ -51,12 +55,13 @@ describe('GET /api/v1/flags', () => {
   it('returns the list of flags for a given tenant and environment', async () => {
     const res = await app.request(`/api/v1/flags?tenantId=${tenantId}&environment=production`, {
       method: 'GET',
+      headers: { ...authHeaders },
     });
     expect(res.status).toBe(200);
     const data = await res.json();
 
     expect(data).toHaveLength(2);
-    // Check first flag’s shape including the `environment` field
+    // Check first flag's shape including the `environment` field.
     expect(data[0]).toMatchObject({
       key: 'flag-prod-1',
       name: 'Production Flag 1',
@@ -71,7 +76,7 @@ describe('GET /api/v1/flags', () => {
       isEnabled: false,
       environment: 'production',
     });
-    // Ensure fields like `updatedAt` are present as strings (ISO date)
+    // Ensure fields like `updatedAt` are present as strings (ISO date).
     expect(typeof data[0].updatedAt).toBe('string');
   });
 
@@ -79,7 +84,10 @@ describe('GET /api/v1/flags', () => {
     const nonExistentTenantId = '00000000-0000-0000-0000-000000000000';
     const res = await app.request(
       `/api/v1/flags?tenantId=${nonExistentTenantId}&environment=production`,
-      { method: 'GET' },
+      {
+        method: 'GET',
+        headers: { ...authHeaders },
+      },
     );
     expect(res.status).toBe(404);
     const json = await res.json();
@@ -89,6 +97,7 @@ describe('GET /api/v1/flags', () => {
   it('returns 400 if tenantId is missing', async () => {
     const res = await app.request('/api/v1/flags?environment=production', {
       method: 'GET',
+      headers: { ...authHeaders },
     });
     expect(res.status).toBe(400);
     const json = await res.json();
@@ -99,6 +108,7 @@ describe('GET /api/v1/flags', () => {
   it('returns 400 if environment is missing', async () => {
     const res = await app.request(`/api/v1/flags?tenantId=${tenantId}`, {
       method: 'GET',
+      headers: { ...authHeaders },
     });
     expect(res.status).toBe(400);
     const json = await res.json();

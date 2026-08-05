@@ -69,7 +69,7 @@ describe('updateFlag server action', () => {
     const formData = new FormData();
     formData.append('id', flagId);
     formData.append('tenantId', tenantId);
-    // Deliberately omit isEnabled. Action defaults to false
+    // Deliberately omit `isEnabled`. Action defaults to false
     const result = await updateFlag(null, formData);
     expect(result.success).toBe(true);
 

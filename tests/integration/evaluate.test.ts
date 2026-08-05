@@ -4,13 +4,17 @@ import { hashString } from '@/lib/evaluator';
 import { app } from '@/lib/hono-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+const authHeaders = {
+  Authorization: `Bearer ${process.env.API_KEY}`,
+};
+
 type HonoCtx = NonNullable<Parameters<typeof app.request>[3]>;
 
 describe('POST /api/v1/evaluate - Integration Suite', () => {
   let tenantId: string;
 
   beforeEach(async () => {
-    // Clear analytics events first to prevent async log records from blocking tenant deletion
+    // Clear analytics events first to prevent async log records from blocking tenant deletion.
     await db.delete(analyticsEvents);
     await db.delete(featureFlags);
     await db.delete(tenants);
@@ -25,7 +29,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
 
     tenantId = tenant.id;
 
-    // Seed a standard multi-tenant targeting blueprint rule setup
+    // Seed a standard multi-tenant targeting blueprint rule setup.
     await db.insert(featureFlags).values({
       tenantId: tenant.id,
       key: 'premium-features',
@@ -66,7 +70,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
       '/api/v1/evaluate',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(payload),
       },
       undefined,
@@ -96,7 +100,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
       '/api/v1/evaluate',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(payload),
       },
       undefined,
@@ -114,14 +118,24 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
   });
 
   it('should return 400 Bad Request if mandatory shield variables are omitted', async () => {
-    const res = await app.request('/api/v1/evaluate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenantId,
-        environment: 'test',
-      }),
-    });
+    const res = await app.request(
+      '/api/v1/evaluate',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          tenantId,
+          environment: 'test',
+        }),
+      },
+      undefined,
+      {
+        waitUntil: async (promise: Promise<unknown>) => {
+          await promise;
+        },
+        passThroughOnException: () => {},
+      } as unknown as HonoCtx,
+    );
 
     expect(res.status).toBe(400);
   });
@@ -130,7 +144,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
     let rolloutTenantId: string;
 
     beforeEach(async () => {
-      // Clean slate for this block
+      // Clean slate for this block.
       await db.delete(analyticsEvents);
       await db.delete(featureFlags);
       await db.delete(tenants);
@@ -171,7 +185,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
     });
 
     it('should match when rolloutPercentage = 100%', async () => {
-      // Create a separate flag with 100% rollout
+      // Create a separate flag with 100% rollout.
       await db.insert(featureFlags).values({
         tenantId: rolloutTenantId,
         key: 'rollout-100',
@@ -205,7 +219,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
         '/api/v1/evaluate',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify(payload),
         },
         undefined,
@@ -255,7 +269,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
         '/api/v1/evaluate',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify(payload),
         },
         undefined,
@@ -281,7 +295,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
         expectedResults[id] = bucket < 50; // rolloutPercentage = 50
       }
 
-      // Make API calls and assert they match expectations
+      // Make API calls & assert they match expectations.
       for (const id of testIds) {
         const payload = {
           tenantId: rolloutTenantId,
@@ -295,7 +309,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
           '/api/v1/evaluate',
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
             body: JSON.stringify(payload),
           },
           undefined,
@@ -355,7 +369,7 @@ describe('POST /api/v1/evaluate - Integration Suite', () => {
         '/api/v1/evaluate',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify(payload),
         },
         undefined,

@@ -21,6 +21,23 @@ const flagsQuerySchema = z.object({
 
 const app = new Hono()
   .basePath('/api')
+  .use('*', async (c, next) => {
+    const authHeader = c.req.header('Authorization');
+
+    // Expecting `Bearer <token>`
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const token = authHeader.split(' ')[1];
+    const validKey = process.env.API_KEY;
+
+    if (!validKey || token !== validKey) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    await next();
+  })
   .get('/health', (c) => {
     return c.json({
       status: 'healthy',
