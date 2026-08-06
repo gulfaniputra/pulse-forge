@@ -1,4 +1,5 @@
 import { CreateFlagForm } from '@/components/CreateFlagForm';
+import { DeleteFlagButton } from '@/components/DeleteFlagButton';
 import { FlagMetricsChart } from '@/components/FlagMetricsChart';
 import { db } from '@/db';
 import { tenants } from '@/db/schema';
@@ -113,6 +114,11 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
                   >
                     Edit
                   </Link>
+                  <DeleteFlagButton
+                    flagId={flag.id}
+                    tenantId={tenantRecord.id}
+                    tenantSlug={tenantSlug}
+                  />
                   <span
                     className={`h-2 w-2 rounded-full shrink-0 ${
                       flag.isEnabled

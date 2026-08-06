@@ -3,7 +3,7 @@
 import { db } from '@/db';
 import { featureFlags, tenants } from '@/db/schema';
 import { type FeatureFlagTargeting } from '@/db/types';
-import { createFlagSchema, updateFlagSchema } from '@/lib/validations';
+import { createFlagSchema, deleteFlagSchema, updateFlagSchema } from '@/lib/validations';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -235,6 +235,77 @@ export async function updateFlag(_prevState: unknown, formData: FormData) {
     raw.slug || (await db.query.tenants.findFirst({ where: eq(tenants.id, data.tenantId) }))?.slug;
   if (process.env.NODE_ENV !== 'test' && slug) {
     revalidatePath(`/dashboard/${slug}`);
+  }
+
+  return { success: true };
+}
+
+export async function deleteFlag(_prevState: unknown, formData: FormData) {
+  const raw = {
+    id: formData.get('id') as string,
+    tenantId: formData.get('tenantId') as string,
+    slug: formData.get('slug') as string,
+  };
+
+  const parsed = deleteFlagSchema.safeParse({
+    id: raw.id,
+    tenantId: raw.tenantId,
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = parsed.data;
+
+  // 1. Validate tenant exists
+  const tenantExists = await db.query.tenants.findFirst({
+    where: eq(tenants.id, data.tenantId),
+  });
+  if (!tenantExists) {
+    return {
+      success: false,
+      errors: { _form: ['Invalid tenant ID.'] },
+    };
+  }
+
+  // 2. Validate flag exists AND belongs to the tenant
+  const flag = await db.query.featureFlags.findFirst({
+    where: and(eq(featureFlags.id, data.id), eq(featureFlags.tenantId, data.tenantId)),
+  });
+  if (!flag) {
+    return {
+      success: false,
+      errors: { _form: ['Flag not found or not owned by tenant.'] },
+    };
+  }
+
+  // 3. Perform the delete
+  try {
+    await db
+      .delete(featureFlags)
+      .where(and(eq(featureFlags.id, data.id), eq(featureFlags.tenantId, data.tenantId)));
+  } catch (error) {
+    // Handle potential foreign key constraints (e.g., if we ever add FK to analytics)
+    const errorCode = getPostgresErrorCode(error);
+    if (errorCode === '23503') {
+      return {
+        success: false,
+        errors: { _form: ['Cannot delete flag: it has associated analytics data.'] },
+      };
+    }
+    return {
+      success: false,
+      errors: { _form: ['An unexpected error occurred. Please try again.'] },
+    };
+  }
+
+  // 4. Revalidate the dashboard (skip in test)
+  if (process.env.NODE_ENV !== 'test' && raw.slug) {
+    revalidatePath(`/dashboard/${raw.slug}`);
   }
 
   return { success: true };

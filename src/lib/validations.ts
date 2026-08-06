@@ -42,4 +42,10 @@ export const updateFlagSchema = z.object({
     .optional(),
 });
 
+export const deleteFlagSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+});
+export type DeleteFlagInput = z.infer<typeof deleteFlagSchema>;
+
 export type UpdateFlagInput = z.infer<typeof updateFlagSchema>;
