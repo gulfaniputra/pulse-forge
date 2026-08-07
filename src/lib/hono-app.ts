@@ -24,7 +24,6 @@ const app = new Hono()
   .use('*', async (c, next) => {
     const authHeader = c.req.header('Authorization');
 
-    // Expecting `Bearer <token>`
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
@@ -36,7 +35,7 @@ const app = new Hono()
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    await next();
+    return next();
   })
   .get('/health', (c) => {
     return c.json({

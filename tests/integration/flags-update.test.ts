@@ -6,11 +6,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('updateFlag server action', () => {
   let tenantId: string;
-  let tenantSlug: string;
   let flagId: string;
 
   beforeEach(async () => {
-    // Clean slate
+    // Clean slate.
     await db.delete(featureFlags);
     await db.delete(tenants);
 
@@ -19,9 +18,8 @@ describe('updateFlag server action', () => {
       .values({ name: 'Test Corp', slug: 'test-corp' })
       .returning();
     tenantId = tenant.id;
-    tenantSlug = tenant.slug;
 
-    // Insert a flag to update
+    // Insert a flag to update.
     const [flag] = await db
       .insert(featureFlags)
       .values({
@@ -69,7 +67,7 @@ describe('updateFlag server action', () => {
     const formData = new FormData();
     formData.append('id', flagId);
     formData.append('tenantId', tenantId);
-    // Deliberately omit `isEnabled`. Action defaults to false
+    // Deliberately omit `isEnabled`. Action defaults to false.
     const result = await updateFlag(null, formData);
     expect(result.success).toBe(true);
 
@@ -130,7 +128,7 @@ describe('updateFlag server action', () => {
   });
 
   it('rejects if flag does not exist or does not belong to tenant', async () => {
-    // Create another tenant with its own flag
+    // Create another tenant with its own flag.
     const [otherTenant] = await db
       .insert(tenants)
       .values({ name: 'Other', slug: 'other' })

@@ -24,6 +24,9 @@ export function EditFlagForm({ tenantId, tenantSlug, initialData }: EditFlagForm
     errors: {},
   });
 
+  // Cast errors to a `Record` so it can safely access any string key.
+  const errors = state.errors as Record<string, string[] | undefined> | undefined;
+
   return (
     <form
       action={formAction}
@@ -55,9 +58,7 @@ export function EditFlagForm({ tenantId, tenantSlug, initialData }: EditFlagForm
             defaultValue={initialData.name}
             className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          {state.errors?.name && (
-            <p className="text-xs text-red-400 mt-1">{state.errors.name.join(', ')}</p>
-          )}
+          {errors?.name && <p className="text-xs text-red-400 mt-1">{errors.name.join(', ')}</p>}
         </div>
       </div>
 
@@ -111,8 +112,8 @@ export function EditFlagForm({ tenantId, tenantSlug, initialData }: EditFlagForm
           defaultValue={initialData.targetingRules}
           className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
         />
-        {state.errors?.targetingRules && (
-          <p className="text-xs text-red-400 mt-1">{state.errors.targetingRules.join(', ')}</p>
+        {errors?.targetingRules && (
+          <p className="text-xs text-red-400 mt-1">{errors.targetingRules.join(', ')}</p>
         )}
       </div>
 
@@ -130,9 +131,9 @@ export function EditFlagForm({ tenantId, tenantSlug, initialData }: EditFlagForm
         </label>
       </div>
 
-      {state.errors?._form && (
+      {errors?._form && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3 text-sm text-red-400">
-          {state.errors._form.join(', ')}
+          {errors._form.join(', ')}
         </div>
       )}
       {state.success && (
