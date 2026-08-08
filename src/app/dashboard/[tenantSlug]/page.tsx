@@ -1,6 +1,6 @@
 import { CreateFlagForm } from '@/components/CreateFlagForm';
 import { DeleteFlagButton } from '@/components/DeleteFlagButton';
-import { FlagMetricsChart } from '@/components/FlagMetricsChart';
+import { FlagMetricsChart, type MetricsDataPoint } from '@/components/FlagMetricsChart';
 import { db } from '@/db';
 import { tenants } from '@/db/schema';
 import { createRpcClient } from '@/lib/rpc';
@@ -29,24 +29,42 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
   const tenantRecord = await db.query.tenants.findFirst({
     where: eq(tenants.slug, tenantSlug),
   });
-
   if (!tenantRecord) {
     notFound();
   }
 
   const client = createRpcClient();
+
+  // Fetch flags.
   const response = await client.api.v1.flags.$get({
     query: {
       tenantId: tenantRecord.id,
       environment: 'production',
     },
   });
-
   if (!response.ok) {
     throw new Error(`Failed to fetch flags: ${response.status}`);
   }
-
   const flags = (await response.json()) as ApiFlag[];
+
+  // Fetch metrics (server-side RPC client includes the API key automatically).
+  let metricsData: MetricsDataPoint[] = [];
+  try {
+    const metricsResponse = await client.api.v1.metrics.$get({
+      query: {
+        tenantId: tenantRecord.id,
+        environment: 'production',
+      },
+    });
+    if (metricsResponse.ok) {
+      // Cast the response to the expected type. The API returns a string for `day`.
+      metricsData = (await metricsResponse.json()) as MetricsDataPoint[];
+    } else {
+      console.error('Failed to fetch metrics:', metricsResponse.status);
+    }
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +83,7 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
         <h2 className="text-lg font-semibold text-slate-200 mb-4">
           Evaluation Activity (last 7 days)
         </h2>
-        <FlagMetricsChart tenantId={tenantRecord.id} environment="production" />
+        <FlagMetricsChart data={metricsData} />
       </div>
 
       <div className="grid gap-4">
@@ -79,7 +97,6 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
               dateStyle: 'medium',
               timeZone: 'UTC',
             });
-
             return (
               <div
                 key={flag.id}
@@ -106,7 +123,6 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
                   )}
                   <p className="text-[11px] text-slate-500 pt-2">Updated: {lastUpdatedString}</p>
                 </div>
-
                 <div className="flex items-center gap-4">
                   <Link
                     href={`/dashboard/${tenantSlug}/flags/${flag.id}/edit`}
