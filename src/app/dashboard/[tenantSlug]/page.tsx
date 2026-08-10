@@ -69,7 +69,7 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="space-y-3">
           <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
           <p className="text-sm text-slate-400">
             Control application toggles and configuration strategies in real time.

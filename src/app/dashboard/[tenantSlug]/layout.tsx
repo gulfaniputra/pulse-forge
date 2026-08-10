@@ -11,7 +11,7 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({ children, params }: DashboardLayoutProps) {
   const { tenantSlug } = await params;
 
-  // Enforce server-side tenant scoping checks
+  // Enforce server-side tenant scoping checks.
   const currentTenant = await db.query.tenants.findFirst({
     where: eq(tenants.slug, tenantSlug),
   });
@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children, params }: DashboardLay
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800 bg-slate-950/50 px-6 py-4 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-slate-950/70 backdrop-blur-xl px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <span className="font-bold tracking-wider text-indigo-400">pulse-forge</span>
