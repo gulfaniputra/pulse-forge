@@ -22,8 +22,12 @@ const flagsQuerySchema = z.object({
 const app = new Hono()
   .basePath('/api')
   .use('*', async (c, next) => {
-    const authHeader = c.req.header('Authorization');
+    // Exempt health check from authentication (per spec)
+    if (c.req.path === '/api/health') {
+      return next();
+    }
 
+    const authHeader = c.req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }

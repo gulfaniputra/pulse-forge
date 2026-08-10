@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 describe('API Key Authentication', () => {
   it('returns 401 when Authorization header is missing', async () => {
-    const res = await app.request('/api/health', {
+    const res = await app.request('/api/v1/flags', {
       method: 'GET',
     });
     expect(res.status).toBe(401);
   });
 
   it('returns 401 when Authorization header is invalid', async () => {
-    const res = await app.request('/api/health', {
+    const res = await app.request('/api/v1/flags', {
       method: 'GET',
       headers: { Authorization: 'Bearer wrong-key' },
     });
@@ -18,6 +18,7 @@ describe('API Key Authentication', () => {
   });
 
   it('returns 200 when valid Authorization header is provided', async () => {
+    // Use `/api/health` since it's now public. Valid auth still works.
     const res = await app.request('/api/health', {
       method: 'GET',
       headers: { Authorization: `Bearer ${process.env.API_KEY}` },

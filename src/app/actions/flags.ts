@@ -26,7 +26,7 @@ function getPostgresErrorCode(error: unknown): string | undefined {
     'code' in cause &&
     typeof (cause as { code: unknown }).code === 'string'
   ) {
-    // return (cause as { code: string }).code;
+    return (cause as { code: string }).code;
   }
 
   const original = (error as { original?: unknown }).original;
@@ -115,7 +115,8 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
     });
   } catch (error) {
     const errorCode = getPostgresErrorCode(error);
-    if (errorCode === '23505') {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorCode === '23505' || errorMessage.includes('duplicate key')) {
       return {
         success: false,
         errors: { _form: ['Flag with this key and environment already exists.'] },
@@ -217,7 +218,8 @@ export async function updateFlag(_prevState: unknown, formData: FormData) {
       .where(and(eq(featureFlags.id, data.id), eq(featureFlags.tenantId, data.tenantId)));
   } catch (error) {
     const errorCode = getPostgresErrorCode(error);
-    if (errorCode === '23505') {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorCode === '23505' || errorMessage.includes('duplicate key')) {
       return {
         success: false,
         errors: { _form: ['A flag with this key and environment already exists.'] },
