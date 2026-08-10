@@ -6,6 +6,7 @@ import { type FeatureFlagTargeting } from '@/db/types';
 import { createFlagSchema, deleteFlagSchema, updateFlagSchema } from '@/lib/validations';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 /**
  * Extract Postgres error code from various error shapes.
@@ -25,7 +26,7 @@ function getPostgresErrorCode(error: unknown): string | undefined {
     'code' in cause &&
     typeof (cause as { code: unknown }).code === 'string'
   ) {
-    return (cause as { code: string }).code;
+    // return (cause as { code: string }).code;
   }
 
   const original = (error as { original?: unknown }).original;
@@ -41,7 +42,7 @@ function getPostgresErrorCode(error: unknown): string | undefined {
   return undefined;
 }
 
-// Create Flag
+// Create Flag.
 export async function createFlag(_prevState: unknown, formData: FormData) {
   const raw = {
     tenantId: formData.get('tenantId') as string,
@@ -133,7 +134,7 @@ export async function createFlag(_prevState: unknown, formData: FormData) {
   return { success: true };
 }
 
-// Update Flag
+// Update flag.
 export async function updateFlag(_prevState: unknown, formData: FormData) {
   const raw = {
     id: formData.get('id') as string,
@@ -141,7 +142,6 @@ export async function updateFlag(_prevState: unknown, formData: FormData) {
     name: formData.get('name') as string | null,
     description: formData.get('description') as string | null,
     type: formData.get('type') as 'boolean' | 'multivariate' | null,
-    // Always derive isEnabled – default to false if checkbox is absent
     isEnabled: formData.has('isEnabled') && formData.get('isEnabled') === 'true',
     slug: formData.get('slug') as string | null,
   };
@@ -161,12 +161,10 @@ export async function updateFlag(_prevState: unknown, formData: FormData) {
     }
   }
 
-  // Build payload.
-  // Includes all fields that were sent but always include `isEnabled` to allow toggling off.
   const payload: Record<string, unknown> = {
     id: raw.id,
     tenantId: raw.tenantId,
-    isEnabled: raw.isEnabled, // always set
+    isEnabled: raw.isEnabled,
   };
   if (raw.name !== null) payload.name = raw.name;
   if (raw.description !== null) payload.description = raw.description;
@@ -231,12 +229,15 @@ export async function updateFlag(_prevState: unknown, formData: FormData) {
     };
   }
 
+  // Revalidate & redirect (skip in test environment).
   const slug =
     raw.slug || (await db.query.tenants.findFirst({ where: eq(tenants.id, data.tenantId) }))?.slug;
   if (process.env.NODE_ENV !== 'test' && slug) {
     revalidatePath(`/dashboard/${slug}`);
+    redirect(`/dashboard/${slug}`);
   }
 
+  // In test environment return success without redirect.
   return { success: true };
 }
 
@@ -261,7 +262,6 @@ export async function deleteFlag(_prevState: unknown, formData: FormData) {
 
   const data = parsed.data;
 
-  // 1. Validate tenant exists
   const tenantExists = await db.query.tenants.findFirst({
     where: eq(tenants.id, data.tenantId),
   });
@@ -272,7 +272,6 @@ export async function deleteFlag(_prevState: unknown, formData: FormData) {
     };
   }
 
-  // 2. Validate flag exists AND belongs to the tenant
   const flag = await db.query.featureFlags.findFirst({
     where: and(eq(featureFlags.id, data.id), eq(featureFlags.tenantId, data.tenantId)),
   });
@@ -283,13 +282,11 @@ export async function deleteFlag(_prevState: unknown, formData: FormData) {
     };
   }
 
-  // 3. Perform the delete
   try {
     await db
       .delete(featureFlags)
       .where(and(eq(featureFlags.id, data.id), eq(featureFlags.tenantId, data.tenantId)));
   } catch (error) {
-    // Handle potential foreign key constraints (e.g., if we ever add FK to analytics)
     const errorCode = getPostgresErrorCode(error);
     if (errorCode === '23503') {
       return {
@@ -303,7 +300,6 @@ export async function deleteFlag(_prevState: unknown, formData: FormData) {
     };
   }
 
-  // 4. Revalidate the dashboard (skip in test)
   if (process.env.NODE_ENV !== 'test' && raw.slug) {
     revalidatePath(`/dashboard/${raw.slug}`);
   }

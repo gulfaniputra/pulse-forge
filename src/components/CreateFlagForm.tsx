@@ -1,7 +1,11 @@
 'use client';
 
 import { createFlag } from '@/app/actions/flags';
-import { useActionState } from 'react';
+import { highlight, languages } from 'prismjs';
+import 'prismjs/components/prism-json';
+import 'prismjs/themes/prism-tomorrow.css';
+import { useActionState, useState } from 'react';
+import Editor from 'react-simple-code-editor';
 
 interface CreateFlagFormProps {
   tenantId: string;
@@ -13,6 +17,9 @@ export function CreateFlagForm({ tenantId, tenantSlug }: CreateFlagFormProps) {
     success: false,
     errors: {},
   });
+
+  // Controlled state for the JSON editor.
+  const [targetingRules, setTargetingRules] = useState('{ "rules": [], "defaultVariant": false }');
 
   return (
     <form
@@ -109,13 +116,48 @@ export function CreateFlagForm({ tenantId, tenantSlug }: CreateFlagFormProps) {
         <label htmlFor="targetingRules" className="block text-xs font-medium text-slate-400 mb-1">
           Targeting Rules (JSON)
         </label>
-        <textarea
-          id="targetingRules"
-          name="targetingRules"
-          rows={4}
-          className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-          placeholder='{ "rules": [ { "id": "rule1", "name": "Beta", "conditions": [ { "attribute": "email", "operator": "contains", "value": "@beta.com" } ], "variant": true } ], "defaultVariant": false }'
+
+        {/* Quick Template Selector */}
+        <div className="mb-2">
+          <label className="block text-xs font-medium text-slate-400 mb-1">Quick Template</label>
+          <select
+            onChange={(e) => {
+              if (e.target.value) {
+                setTargetingRules(e.target.value);
+              }
+            }}
+            className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            defaultValue=""
+          >
+            <option value="">-- Select a template --</option>
+            <option value='{"rules":[{"id":"rule1","name":"100% Rollout","conditions":[{"attribute":"email","operator":"contains","value":"@company.com"}],"variant":true}],"defaultVariant":false}'>
+              Boolean: Email Contains
+            </option>
+            <option value='{"variants":[{"key":"small","value":"small"},{"key":"large","value":"large"}],"rules":[{"id":"rule1","name":"Region US","conditions":[{"attribute":"country","operator":"equals","value":"US"}],"variant":"large"}],"defaultVariant":"small"}'>
+              Multivariate: Region Split
+            </option>
+          </select>
+        </div>
+
+        {/* Syntax-Highlighted JSON Editor */}
+        <Editor
+          value={targetingRules}
+          onValueChange={(code) => setTargetingRules(code)}
+          highlight={(code) => highlight(code, languages.json, 'json')}
+          padding={10}
+          style={{
+            fontFamily: '"Fira Code", "Fira Mono", monospace',
+            fontSize: 14,
+            backgroundColor: '#0f172a',
+            color: '#e2e8f0',
+            borderRadius: '0.375rem',
+            border: '1px solid #334155',
+            minHeight: '120px',
+          }}
+          textareaId="targetingRules"
+          name="targetingRules" // This ensures the Server Action receives the value.
         />
+
         {state.errors && 'targetingRules' in state.errors && state.errors.targetingRules && (
           <p className="text-xs text-red-400 mt-1">{state.errors.targetingRules.join(', ')}</p>
         )}
