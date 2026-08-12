@@ -151,4 +151,4 @@ npm run test:e2e           # Playwright E2E tests
 
 ## License
 
-[GNU GPL v3.0](LICENSE)
+[MIT License](LICENSE)
