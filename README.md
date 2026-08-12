@@ -1,5 +1,16 @@
 # pulse-forge
 
+[![CI](https://github.com/gulfaniputra/pulse-forge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gulfaniputra/pulse-forge/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](<>)
+![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-E36002?style=for-the-badge&logo=hono&logoColor=white)
+![Neon Postgres](https://img.shields.io/badge/Neon_Postgres-00E5A0?style=for-the-badge&logo=postgresql&logoColor=white)
+
+![User fills out feature flag options, clicks 'Create Flag', & adds new flag to active table.](./docs/demo.gif)
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://pulse-forge-demo.vercel.app/)
+
 **pulse-forge** is a multi-tenant feature-flag evaluation API and event-analytics ingestion service with a small dashboard for listing and creating flags per tenant/environment.
 
 It's a Hono API colocated inside a Next.js App Router project, backed by Neon Postgres, targeting edge-native deployment via the `hono/vercel` adapter (`runtime = 'edge'`). It goes through a fully typed Hono RPC contract and flag creation runs through a separate Next.js Server Action, not the Hono API.
