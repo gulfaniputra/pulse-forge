@@ -26,44 +26,52 @@ interface PageProps {
 export default async function FlagsOverviewPage({ params }: PageProps) {
   const { tenantSlug } = await params;
 
+  // Fetch tenant (required for subsequent calls).
   const tenantRecord = await db.query.tenants.findFirst({
     where: eq(tenants.slug, tenantSlug),
   });
-  if (!tenantRecord) {
-    notFound();
-  }
 
+  if (!tenantRecord) notFound();
+
+  // Create RPC client (server-side with API key automatically injected).
   const client = createRpcClient();
 
-  // Fetch flags.
-  const response = await client.api.v1.flags.$get({
-    query: {
-      tenantId: tenantRecord.id,
-      environment: 'production',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch flags: ${response.status}`);
-  }
-  const flags = (await response.json()) as ApiFlag[];
+  // Fetch flags & metrics concurrently with timeout protection.
+  const fetchWithTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
+    ]);
 
-  // Fetch metrics (server-side RPC client includes the API key automatically).
+  const [flagsResponse, metricsResponse] = await Promise.all([
+    fetchWithTimeout(
+      client.api.v1.flags.$get({
+        query: { tenantId: tenantRecord.id, environment: 'production' },
+      }),
+      5000,
+    ),
+    fetchWithTimeout(
+      client.api.v1.metrics.$get({
+        query: { tenantId: tenantRecord.id, environment: 'production' },
+      }),
+      5000,
+    ),
+  ]);
+
+  // Parse responses (with graceful fallback).
+  let flags: ApiFlag[] = [];
   let metricsData: MetricsDataPoint[] = [];
-  try {
-    const metricsResponse = await client.api.v1.metrics.$get({
-      query: {
-        tenantId: tenantRecord.id,
-        environment: 'production',
-      },
-    });
-    if (metricsResponse.ok) {
-      // Cast the response to the expected type. The API returns a string for `day`.
-      metricsData = (await metricsResponse.json()) as MetricsDataPoint[];
-    } else {
-      console.error('Failed to fetch metrics:', metricsResponse.status);
-    }
-  } catch (error) {
-    console.error('Error fetching metrics:', error);
+
+  if (flagsResponse.ok) {
+    flags = (await flagsResponse.json()) as ApiFlag[];
+  } else {
+    console.error('Failed to fetch flags:', flagsResponse.status);
+  }
+
+  if (metricsResponse.ok) {
+    metricsData = (await metricsResponse.json()) as MetricsDataPoint[];
+  } else {
+    console.error('Failed to fetch metrics:', metricsResponse.status);
   }
 
   return (
@@ -72,7 +80,7 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
         <div className="space-y-3">
           <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
           <p className="text-sm text-slate-400">
-            Control application toggles and configuration strategies in real time.
+            Control application toggles & configuration strategies in real time.
           </p>
         </div>
       </div>
