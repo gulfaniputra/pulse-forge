@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Quality Gates
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 22.x
           cache: 'npm'
 
       - name: Install Dependencies

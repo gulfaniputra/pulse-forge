@@ -19,9 +19,12 @@ playwright/.cache/
 .nyc_output/
 coverage/
 
-# Environment files
-.env*
-*.env.local
+# Env files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
 
 # Lockfiles
 package-lock.json

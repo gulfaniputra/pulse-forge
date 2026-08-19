@@ -2,7 +2,7 @@
   "name": "pulse-forge",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@10.x",
+  "packageManager": "npm@11.16.0",
   "engines": {
     "node": ">=20",
     "npm": ">=10"
@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
+    "@next/eslint-plugin-next": "^16.3.1",
     "@playwright/test": "^1.49.0",
     "@types/dotenv": "^6.1.1",
     "@types/node": "^22.10.0",
