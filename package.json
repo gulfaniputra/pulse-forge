@@ -22,7 +22,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "test:unit": "vitest",
     "test:integration": "NODE_ENV=test vitest run",
-    "test:e2e": "playwright test --project=chromium"
+    "test:e2e": "playwright test --project=chromium",
+    "prepare": "husky"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
@@ -60,6 +61,8 @@
     "eslint": "^9.16.0",
     "eslint-config-next": "15.5.20",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "postcss": "^8.5.10",
     "prettier": "^3.9.4",
     "tailwindcss": "^3.4.16",
