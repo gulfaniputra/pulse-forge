@@ -22,7 +22,7 @@ const flagsQuerySchema = z.object({
 const app = new Hono()
   .basePath('/api')
   .use('*', async (c, next) => {
-    // Exempt health check from authentication (per spec)
+    // Exempt health check from authentication.
     if (c.req.path === '/api/health') {
       return next();
     }
@@ -84,7 +84,9 @@ const app = new Hono()
     if (c.executionCtx?.waitUntil) {
       c.executionCtx.waitUntil(logIngestionTask);
     } else {
-      logIngestionTask.catch((err) => console.error('Failed to log event asynchronously:', err));
+      logIngestionTask.catch((err: Error) =>
+        console.error('Failed to log event asynchronously:', err),
+      );
     }
 
     return c.json({
@@ -109,10 +111,12 @@ const app = new Hono()
 
     const flags = await db.query.featureFlags.findMany({
       where: and(eq(featureFlags.tenantId, tenantId), eq(featureFlags.environment, environment)),
-      orderBy: (flags, { desc }) => [desc(flags.updatedAt)],
+      orderBy: (flags: typeof featureFlags, { desc }: { desc: <T>(col: T) => T }) => [
+        desc(flags.updatedAt),
+      ],
     });
 
-    const result = flags.map((flag) => ({
+    const result = flags.map((flag: typeof featureFlags.$inferSelect) => ({
       id: flag.id,
       key: flag.key,
       name: flag.name,
@@ -146,7 +150,7 @@ const app = new Hono()
       .from(featureFlags)
       .where(and(eq(featureFlags.tenantId, tenantId), eq(featureFlags.environment, environment)));
 
-    const flagKeys = flagKeysResult.map((row) => row.key);
+    const flagKeys = flagKeysResult.map((row: { key: string }) => row.key);
     if (flagKeys.length === 0) {
       return c.json([]);
     }
