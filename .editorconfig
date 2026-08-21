@@ -1,0 +1,44 @@
+# EditorConfig: https://editorconfig.org/
+
+root = true
+
+# Global settings
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 100
+
+# JavaScript/TypeScript/JSX/TSX
+[*.{js,jsx,ts,tsx}]
+indent_size = 2
+max_line_length = 100
+
+# Common config files
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+# Markdown specific
+[*.md]
+max_line_length = 100
+trim_trailing_whitespace = false
+
+# Husky pre-commit hooks
+[*.sh]
+indent_size = 2
+end_of_line = lf
+
+# CSS/Tailwind
+[*.{css,scss,sass}]
+indent_size = 2
+
+# SQL (Drizzle migrations)
+[*.sql]
+indent_size = 2
+
+# dotfiles, .cjs, .mjs
+[*.{cjs,mjs}]
+indent_size = 2

@@ -9,6 +9,7 @@
     "mikestead.dotenv",
     "yoavbls.pretty-ts-errors",
     "csstools.postcss",
-    "mtxr.sqltools"
+    "mtxr.sqltools",
+    "EditorConfig.EditorConfig"
   ]
 }
