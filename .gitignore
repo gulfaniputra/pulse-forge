@@ -47,11 +47,10 @@ jspm_packages/
 
 # dotenv environment variables files
 .env
-.env.local
-.env.developer
-.env.production
-.env.development
-.env.test
+.env.*
+!.env.example
+!.env.local.example
+!.env.test.example
 
 # Cloudflare Workers/Wrangler local development
 .wrangler/
@@ -78,10 +77,12 @@ playwright/.cache/
 .last-run.json
 
 # IDEs & editors
-.idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/launch.json
 !.vscode/settings.json
+!.vscode/tasks.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj

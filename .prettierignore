@@ -8,6 +8,8 @@ build/
 node_modules/
 
 # Generated & cache files
+*.log
+drizzle/
 drizzle/meta/*.json
 .drizzle/
 tsconfig.tsbuildinfo
@@ -21,10 +23,10 @@ coverage/
 
 # Env files
 .env
-.env.local
-.env.development
-.env.production
-.env.test
+.env.*
+!.env.example
+!.env.local.example
+!.env.test.example
 
 # Lockfiles
 package-lock.json

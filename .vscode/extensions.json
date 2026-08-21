@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "guskis.vscode-drizzle-studio",
+    "mikestead.dotenv",
+    "yoavbls.pretty-ts-errors",
+    "csstools.postcss",
+    "mtxr.sqltools"
+  ]
+}
