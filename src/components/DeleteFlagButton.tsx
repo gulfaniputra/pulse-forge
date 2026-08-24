@@ -15,6 +15,8 @@ export function DeleteFlagButton({ flagId, tenantId, tenantSlug }: DeleteFlagBut
     errors: {},
   });
 
+  const errors = state.errors as Record<string, string[] | undefined> | undefined;
+
   return (
     <form
       action={formAction}
@@ -23,20 +25,21 @@ export function DeleteFlagButton({ flagId, tenantId, tenantSlug }: DeleteFlagBut
           e.preventDefault();
         }
       }}
+      className="inline"
     >
       <input type="hidden" name="id" value={flagId} />
       <input type="hidden" name="tenantId" value={tenantId} />
       <input type="hidden" name="slug" value={tenantSlug} />
+
       <button
         type="submit"
         disabled={isPending}
-        className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-xs text-nordic-red hover:text-nordic-red hover:text-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? 'Deleting...' : 'Delete'}
       </button>
-      {state.errors && '_form' in state.errors && (
-        <p className="text-xs text-red-400 mt-1">{state.errors._form.join(', ')}</p>
-      )}
+
+      {errors?._form && <p className="text-xs text-nordic-red mt-1.5">{errors._form.join(', ')}</p>}
     </form>
   );
 }

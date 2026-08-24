@@ -26,17 +26,13 @@ interface PageProps {
 export default async function FlagsOverviewPage({ params }: PageProps) {
   const { tenantSlug } = await params;
 
-  // Fetch tenant (required for subsequent calls).
   const tenantRecord = await db.query.tenants.findFirst({
     where: eq(tenants.slug, tenantSlug),
   });
-
   if (!tenantRecord) notFound();
 
-  // Create RPC client (server-side with API key automatically injected).
   const client = createRpcClient();
 
-  // Fetch flags & metrics concurrently with timeout protection.
   const fetchWithTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
     Promise.race([
       promise,
@@ -58,7 +54,6 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
     ),
   ]);
 
-  // Parse responses (with graceful fallback).
   let flags: ApiFlag[] = [];
   let metricsData: MetricsDataPoint[] = [];
 
@@ -75,29 +70,35 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="space-y-3">
-          <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
-          <p className="text-sm text-slate-400">
-            Control application toggles & configuration strategies in real time.
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-nordic-snow">Feature Flags</h1>
+          <p className="text-sm text-nordic-frost text-opacity-70">
+            Control application toggles & configuration strategies in real time
           </p>
         </div>
       </div>
 
+      {/* Create Flag Form */}
       <CreateFlagForm tenantId={tenantRecord.id} tenantSlug={tenantSlug} />
 
-      <div className="border border-slate-800 rounded-xl p-5 bg-slate-950/30">
-        <h2 className="text-lg font-semibold text-slate-200 mb-4">
+      {/* Metrics Chart */}
+      <div className="nordic-card">
+        <h2 className="text-lg font-semibold text-nordic-snow mb-4">
           Evaluation Activity (last 7 days)
         </h2>
         <FlagMetricsChart data={metricsData} />
       </div>
 
+      {/* Flag List */}
       <div className="grid gap-4">
         {flags.length === 0 ? (
-          <div className="border border-dashed border-slate-800 rounded-xl p-12 text-center bg-slate-950/20">
-            <p className="text-slate-400 text-sm">No flags registered for this environment yet.</p>
+          <div className="border border-dashed border-nordic-polar rounded-xl p-12 text-center bg-nordic-dark bg-opacity-50">
+            <p className="text-nordic-frost text-opacity-60 text-sm">
+              No flags registered for this environment yet.
+            </p>
           </div>
         ) : (
           flags.map((flag) => {
@@ -105,36 +106,40 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
               dateStyle: 'medium',
               timeZone: 'UTC',
             });
+
             return (
               <div
                 key={flag.id}
-                className="border border-slate-800 bg-slate-950/30 rounded-xl p-5 flex justify-between items-start hover:border-slate-700 transition-colors"
+                className="nordic-card flex justify-between items-start hover:border-nordic-cyan hover:border-opacity-30 transition-colors"
               >
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-3">
-                    <span className="font-mono font-semibold text-indigo-300 text-sm tracking-tight">
+                    <span className="font-mono font-semibold text-nordic-cyan text-sm tracking-tight">
                       {flag.key}
                     </span>
                     <span
                       className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
                         flag.type === 'boolean'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          ? 'bg-nordic-green bg-opacity-10 text-nordic-green border border-nordic-green border-opacity-20'
+                          : 'bg-nordic-gold bg-opacity-10 text-nordic-gold border border-nordic-gold border-opacity-20'
                       }`}
                     >
                       {flag.type}
                     </span>
                   </div>
-                  <h2 className="text-sm font-medium text-slate-200">{flag.name}</h2>
+                  <h2 className="text-sm font-medium text-nordic-snow">{flag.name}</h2>
                   {flag.description && (
-                    <p className="text-xs text-slate-400 max-w-xl">{flag.description}</p>
+                    <p className="text-xs text-nordic-frost text-opacity-70 max-w-xl">
+                      {flag.description}
+                    </p>
                   )}
-                  <p className="text-[11px] text-slate-500 pt-2">Updated: {lastUpdatedString}</p>
+                  <p className="text-[11px] text-nordic-polar pt-2">Updated: {lastUpdatedString}</p>
                 </div>
-                <div className="flex items-center gap-4">
+
+                <div className="flex items-center gap-4 shrink-0">
                   <Link
                     href={`/dashboard/${tenantSlug}/flags/${flag.id}/edit`}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    className="text-xs text-nordic-cyan hover:text-nordic-cyan hover:text-opacity-80 transition-colors"
                   >
                     Edit
                   </Link>
@@ -145,12 +150,10 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
                   />
                   <span
                     className={`h-2 w-2 rounded-full shrink-0 ${
-                      flag.isEnabled
-                        ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                        : 'bg-slate-600'
+                      flag.isEnabled ? 'bg-nordic-green shadow-sm' : 'bg-nordic-polar'
                     }`}
                   />
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-nordic-frost text-opacity-60">
                     {flag.isEnabled ? 'Active' : 'Disabled'}
                   </span>
                 </div>
