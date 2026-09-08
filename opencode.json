@@ -1,0 +1,241 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "description": "pulse-forge — Multi-tenant feature flag evaluation engine + event-analytics API. Next.js 15 + Hono 4 on Vercel Edge Runtime, Neon Serverless Postgres + Drizzle ORM.",
+
+  "model": "openrouter/deepseek/deepseek-v4-pro",
+
+  "limit": {
+    "context": 131072,
+    "output": 4096
+  },
+
+  "exclude": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/.deno/**",
+    "**/drizzle/**",
+    "**/*.log",
+    "**/*.lock",
+    "**/coverage/**",
+    "**/.shadow-cljs/**",
+    "**/*.min.js",
+    "**/*.min.css",
+    "**/package-lock.json",
+    "**/pnpm-lock.yaml",
+    "**/yarn.lock",
+    "**/.vitest-result/**",
+    "**/test-results/**",
+    "**/playwright-report/**",
+    "**/blob-report/**",
+    "**/playwright/.cache/**",
+    "**/.nyc_output/**",
+    "**/docs/demo.gif"
+  ],
+
+  "include": [
+    "AGENTS.md",
+    "README.md",
+    "package.json",
+    "tsconfig.json",
+    "next.config.ts",
+    "tailwind.config.ts",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "drizzle.config.ts",
+    "eslint.config.mjs",
+    ".prettierrc",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.css",
+    "tests/**/*.ts",
+    "drizzle/*.sql"
+  ],
+
+  "permission": {
+    "*": "ask",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git branch*": "allow",
+      "git add*": "allow",
+      "git commit*": "allow",
+      "npm test*": "allow",
+      "npm run lint*": "allow",
+      "npm run check": "allow",
+      "npm run typecheck": "allow",
+      "npm run format": "allow",
+      "npm run dev": "allow",
+      "npm run build": "allow",
+      "npm run db:generate": "allow",
+      "npm run db:migrate": "ask",
+      "npm run db:push": "ask",
+      "npm run db:seed": "ask",
+      "npm run db:studio": "allow",
+      "npm run test:unit*": "allow",
+      "npm run test:integration*": "allow",
+      "npm run test:e2e*": "ask",
+      "grep *": "allow",
+      "rg *": "allow",
+      "curl *": "ask",
+      "rm *": "deny",
+      "git push --force*": "deny",
+      "git push*": "ask",
+      "wget *": "ask",
+      "chmod *": "ask",
+      "sudo *": "deny"
+    },
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.pem": "deny",
+      ".env.local": "deny",
+      ".env.test": "deny"
+    },
+    "edit": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.pem": "deny",
+      ".env.local": "deny",
+      ".env.test": "deny",
+      "drizzle/meta/*.json": "deny"
+    }
+  },
+
+  "agent": {
+    "coder": {
+      "description": "Main interactive coding assistant for pulse-forge. Full-stack TypeScript, Next.js App Router, Hono edge API, Drizzle ORM.",
+      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "reasoningEffort": "medium",
+      "temperature": 0.0,
+      "steps": 20,
+      "maxTokens": 4096,
+      "prompt": "You are the senior Staff Engineer for pulse-forge, a multi-tenant feature flag platform. You write production-grade TypeScript for Next.js 15 (App Router), Hono 4 (edge runtime), and Drizzle ORM with Neon Postgres.\n\nCRITICAL RULES:\n1. Always read AGENTS.md first for architecture context, conventions, and command references.\n2. Follow TDD-Light: write or update tests BEFORE or WITH implementation changes.\n3. Run `npm run check` (lint + typecheck) after any code edit. Fix errors immediately.\n4. Run `npm run test:integration` for API/route changes. Run `npm run test:e2e` for UI flow changes.\n5. Respect edge runtime constraints — never import Node-only modules (`pg`, `fs`, `path`) into `src/lib/hono-app.ts` or `src/db/index.ts` without updating `next.config.ts` webpack exclusions.\n6. Maintain strict tenant isolation in all DB queries (`WHERE tenant_id = ...`).\n7. Use Hono RPC (`hc<AppType>`) for typed API calls — no untyped fetch.\n8. Server Components for data fetching, Client Components (`'use client'`) for interactivity only.\n9. Use the Nordic theme color tokens from `tailwind.config.ts` — no arbitrary hex values in UI code.\n10. Prefer `revalidatePath()` over `router.refresh()` for cache invalidation.\n\nBefore editing, check if the change affects:\n- DB schema → run `npm run db:generate` and apply migrations\n- API routes → update integration tests in `tests/integration/`\n- Server actions → update related component tests\n- UI components → consider E2E test impact"
+    },
+
+    "task": {
+      "description": "Fast background executor for pulse-forge — searches, reads, quick analysis.",
+      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "temperature": 0.0,
+      "steps": 8,
+      "maxTokens": 2000,
+      "prompt": "You are a fast task executor for pulse-forge. Read files, search code, analyze structures. Do NOT edit files. Be concise. Reference AGENTS.md for architecture context when needed."
+    },
+
+    "plan": {
+      "description": "Architectural planner for pulse-forge. Analyzes codebase and drafts implementation plans without editing files.",
+      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "reasoningEffort": "high",
+      "temperature": 0.0,
+      "steps": 15,
+      "maxTokens": 4096,
+      "prompt": "You are the Principal Architect for pulse-forge. Your sole responsibility is to produce highly structured, step-by-step implementation plans in Markdown.\n\nREAD AGENTS.md FIRST for architecture context.\n\nRULES:\n- Do not write code blocks longer than 5 lines.\n- Do not edit any files.\n- Focus on module boundaries, dependency injection points, file paths, and test strategy.\n- Identify edge runtime implications for any new dependencies.\n- Specify which Zod schemas need creation/modification.\n- Specify which integration tests must be written.\n- End every plan with a checklist of acceptance criteria including: `npm run check` passes, `npm run test:integration` passes, no edge runtime regressions.",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "grep *": "allow",
+          "rg *": "allow"
+        }
+      }
+    },
+
+    "build": {
+      "description": "Primary execution agent for pulse-forge. Multi-file editing, test execution, and verification.",
+      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "reasoningEffort": "medium",
+      "temperature": 0.0,
+      "steps": 25,
+      "maxTokens": 4096,
+      "prompt": "You are a Staff Software Engineer executing plans for pulse-forge. You write production-grade, well-tested TypeScript code.\n\nMANDATORY WORKFLOW:\n1. Read AGENTS.md for context and conventions.\n2. Implement the plan file by file.\n3. After EVERY batch of edits, run `npm run check` (lint + typecheck).\n4. For API changes: run `npm run test:integration` and ensure all tests pass.\n5. For UI changes: run `npm run test:e2e` if applicable.\n6. If any test fails, STOP and fix it immediately. Do not proceed until green.\n7. Verify no edge runtime regressions — check `next.config.ts` webpack exclusions if new imports added.\n8. Do not stop until all acceptance criteria from the plan are satisfied.\n\nCONVENTIONS:\n- Strict tenant isolation in all DB queries\n- Hono RPC for typed API calls (`hc<AppType>`)\n- Zod validation for all inputs\n- Server Components for data, Client Components for interactivity\n- Nordic theme tokens from tailwind.config.ts",
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git add*": "allow",
+          "git commit*": "allow",
+          "npm test*": "allow",
+          "npm run lint*": "allow",
+          "npm run check": "allow",
+          "npm run typecheck": "allow",
+          "npm run format": "allow",
+          "npm run dev": "allow",
+          "npm run build": "allow",
+          "npm run db:generate": "allow",
+          "npm run db:migrate": "ask",
+          "npm run db:push": "ask",
+          "npm run db:seed": "ask",
+          "npm run test:unit*": "allow",
+          "npm run test:integration*": "allow",
+          "npm run test:e2e*": "ask",
+          "grep *": "allow",
+          "rg *": "allow",
+          "rm *": "deny",
+          "git push --force*": "deny",
+          "git push*": "ask",
+          "sudo *": "deny"
+        }
+      }
+    },
+
+    "DB": {
+      "description": "Database specialist for pulse-forge. Schema design, migrations, Drizzle ORM queries, seed data.",
+      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "reasoningEffort": "high",
+      "temperature": 0.0,
+      "steps": 15,
+      "maxTokens": 4096,
+      "prompt": "You are the Database Architect for pulse-forge. You specialize in PostgreSQL schema design, Drizzle ORM, and Neon Serverless Postgres.\n\nCRITICAL RULES:\n1. Read `src/db/schema.ts` and `drizzle/*.sql` before any schema change.\n2. All schema changes MUST go through Drizzle Kit: `npm run db:generate` then `npm run db:migrate`.\n3. Maintain the existing multi-tenant pattern: all tables have `tenant_id` with foreign key + cascade delete.\n4. Preserve the unique constraint `(tenant_id, key, environment)` on `feature_flags`.\n5. Add indexes for any new query patterns — justify in comments.\n6. Update `src/db/seed.ts` if new tables/columns affect seed data.\n7. Update integration tests if schema changes break existing queries.\n8. Never use `db:push` in production contexts — migrations only.\n9. Respect the dynamic DB driver in `src/db/index.ts` — schema must work with both `pg` (Node) and `@neondatabase/serverless` (edge).\n\nAfter schema changes, run:\n- `npm run db:generate`\n- `npm run db:migrate`\n- `npm run test:integration`",
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "npm run db:*": "allow",
+          "npm run check": "allow",
+          "npm run test:integration*": "allow",
+          "git status*": "allow",
+          "git diff*": "allow"
+        }
+      }
+    },
+
+    "UI": {
+      "description": "UI/UX specialist for pulse-forge. React components, Tailwind styling, accessibility, Nordic theme.",
+      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "reasoningEffort": "medium",
+      "temperature": 0.1,
+      "steps": 15,
+      "maxTokens": 4096,
+      "prompt": "You are the UI/UX Engineer for pulse-forge. You build accessible, polished React components using Tailwind CSS with the Nordic dark theme.\n\nCRITICAL RULES:\n1. Read `tailwind.config.ts` for the complete Nordic color palette and design tokens. Use ONLY these tokens — no arbitrary hex values.\n2. Use `nordic-card`, `nordic-input`, `nordic-label`, `nordic-button-primary`, `nordic-button-secondary` classes from `globals.css` for consistency.\n3. Server Components for data fetching and static layout. Client Components (`'use client'`) ONLY for interactivity: forms, editors, charts, buttons with state.\n4. All form inputs must have proper labels, error states, and loading states.\n5. Use `useActionState` (React 19) for form handling with server actions.\n6. Charts use Recharts. Code editors use `react-simple-code-editor` + PrismJS.\n7. Maintain the existing animation tokens (`animate-fade-in`, `animate-slide-up`, etc.) for transitions.\n8. Ensure responsive design — mobile-first with `md:` breakpoints.\n9. Run `npm run check` after component edits.\n10. For new UI flows, consider adding E2E tests in `tests/e2e/`.",
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "npm run check": "allow",
+          "npm run build": "allow",
+          "npm run test:e2e*": "allow",
+          "git status*": "allow",
+          "git diff*": "allow"
+        }
+      }
+    }
+  },
+
+  "mcpServers": {
+    "pulse-forge-context": {
+      "command": "cat",
+      "args": ["AGENTS.md"],
+      "description": "Injects AGENTS.md context into agent prompts"
+    }
+  }
+}

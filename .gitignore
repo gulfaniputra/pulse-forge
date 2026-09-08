@@ -92,3 +92,6 @@ playwright/.cache/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# OpenCode
+.opencode/
