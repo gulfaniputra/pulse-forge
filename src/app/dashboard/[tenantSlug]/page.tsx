@@ -2,9 +2,9 @@ import { CreateFlagForm } from '@/components/CreateFlagForm';
 import { DeleteFlagButton } from '@/components/DeleteFlagButton';
 import { FlagMetricsChart, type MetricsDataPoint } from '@/components/FlagMetricsChart';
 import { db } from '@/db';
-import { tenants } from '@/db/schema';
+import { featureFlags, tenants } from '@/db/schema';
 import { createRpcClient } from '@/lib/rpc';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -39,13 +39,18 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
       new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
     ]);
 
-  const [flagsResponse, metricsResponse] = await Promise.all([
-    fetchWithTimeout(
-      client.api.v1.flags.$get({
-        query: { tenantId: tenantRecord.id, environment: 'production' },
-      }),
-      5000,
-    ),
+  // Flags are read directly from the database in this Server Component. This
+  // avoids a self-referential HTTP hop to our own edge API and keeps the
+  // dashboard renderable in environments where the edge/Neon runtime is not
+  // available (e.g. CI running against a plain Postgres service).
+  const [flagRecords, metricsResponse] = await Promise.all([
+    db.query.featureFlags.findMany({
+      where: and(
+        eq(featureFlags.tenantId, tenantRecord.id),
+        eq(featureFlags.environment, 'production'),
+      ),
+      orderBy: [desc(featureFlags.updatedAt)],
+    }),
     fetchWithTimeout(
       client.api.v1.metrics.$get({
         query: { tenantId: tenantRecord.id, environment: 'production' },
@@ -54,14 +59,18 @@ export default async function FlagsOverviewPage({ params }: PageProps) {
     ),
   ]);
 
-  let flags: ApiFlag[] = [];
-  let metricsData: MetricsDataPoint[] = [];
+  const flags: ApiFlag[] = flagRecords.map((flag: typeof featureFlags.$inferSelect) => ({
+    id: flag.id,
+    key: flag.key,
+    name: flag.name,
+    description: flag.description,
+    type: flag.type,
+    isEnabled: flag.isEnabled,
+    environment: flag.environment,
+    updatedAt: flag.updatedAt.toISOString(),
+  }));
 
-  if (flagsResponse.ok) {
-    flags = (await flagsResponse.json()) as ApiFlag[];
-  } else {
-    console.error('Failed to fetch flags:', flagsResponse.status);
-  }
+  let metricsData: MetricsDataPoint[] = [];
 
   if (metricsResponse.ok) {
     metricsData = (await metricsResponse.json()) as MetricsDataPoint[];
