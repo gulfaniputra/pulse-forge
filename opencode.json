@@ -3,7 +3,8 @@
 
   "instructions": ["AGENTS.md", "README.md"],
 
-  "model": "openrouter/deepseek/deepseek-v4-pro",
+  "model": "openrouter/z-ai/glm-5.2",
+  "default_agent": "build",
 
   "permission": {
     "*": "ask",
@@ -55,25 +56,31 @@
       "*.pem": "deny",
       ".env.local": "deny",
       ".env.test": "deny",
-      "drizzle/meta/*.json": "deny"
+      "drizzle/meta/*.json": "deny",
+      "drizzle/*.sql": "deny"
     }
   },
 
   "agent": {
-    "coder": {
-      "description": "Main interactive coding assistant for pulse-forge. Full-stack TypeScript, Next.js App Router, Hono edge API, Drizzle ORM.",
+    "build": {
+      "description": "Primary execution agent for pulse-forge. Full-stack TypeScript, Next.js App Router, Hono edge API, Drizzle ORM. Multi-file editing, test execution, and verification.",
       "mode": "primary",
-      "model": "openrouter/deepseek/deepseek-v4-pro",
-      "reasoningEffort": "medium",
+      "model": "openrouter/deepseek/deepseek-v4.1-flash",
+      "reasoningEffort": "low",
       "temperature": 0.0,
-      "steps": 20,
-      "prompt": "You are the senior Staff Engineer for pulse-forge, a multi-tenant feature flag platform. You write production-grade TypeScript for Next.js 15 (App Router), Hono 4 (edge runtime), and Drizzle ORM with Neon Postgres.\n\nCRITICAL RULES:\n1. Always read AGENTS.md first for architecture context, conventions, and command references.\n2. Follow TDD-Light: write or update tests BEFORE or WITH implementation changes.\n3. Run `npm run check` (lint + typecheck) after any code edit. Fix errors immediately.\n4. Run `npm run test:integration` for API/route changes. Run `npm run test:e2e` for UI flow changes.\n5. Respect edge runtime constraints — never import Node-only modules (`pg`, `fs`, `path`) into `src/lib/hono-app.ts` or `src/db/index.ts` without updating `next.config.ts` webpack exclusions.\n6. Maintain strict tenant isolation in all DB queries (`WHERE tenant_id = ...`).\n7. Use Hono RPC (`hc<AppType>`) for typed API calls — no untyped fetch.\n8. Server Components for data fetching, Client Components (`'use client'`) for interactivity only.\n9. Use the Nordic theme color tokens from `tailwind.config.ts` — no arbitrary hex values in UI code.\n10. Prefer `revalidatePath()` over `router.refresh()` for cache invalidation.\n\nBefore editing, check if the change affects:\n- DB schema → run `npm run db:generate` and apply migrations\n- API routes → update integration tests in `tests/integration/`\n- Server actions → update related component tests\n- UI components → consider E2E test impact"
+      "steps": 25,
+      "prompt": "You are the senior Staff Engineer for pulse-forge, a multi-tenant feature flag platform. You write production-grade TypeScript for Next.js 15 (App Router), Hono 4 (edge runtime), and Drizzle ORM with Neon Postgres.\n\nMANDATORY WORKFLOW:\n1. Read AGENTS.md first for architecture context, conventions, and command references.\n2. Follow TDD-Light: write or update tests BEFORE or WITH implementation changes.\n3. After EVERY batch of edits, run `npm run check` (lint + typecheck). Fix errors immediately.\n4. For API/route changes: run `npm run test:integration` and ensure all tests pass.\n5. For UI flow changes: run `npm run test:e2e` if applicable.\n6. If any test fails, STOP and fix it immediately. Do not proceed until green.\n7. Do not stop until all acceptance criteria from the plan are satisfied.\n\nCRITICAL RULES:\n- Respect edge runtime constraints — never import Node-only modules (`pg`, `fs`, `path`) into `src/lib/hono-app.ts` or `src/db/index.ts` without updating `next.config.ts` webpack exclusions. Verify no regressions if new imports are added.\n- Maintain strict tenant isolation in all DB queries (`WHERE tenant_id = ...`).\n- Use Hono RPC (`hc<AppType>`) for typed API calls — no untyped fetch.\n- Zod validation for all inputs.\n- Server Components for data fetching, Client Components (`'use client'`) for interactivity only.\n- Use the Nordic theme color tokens from `tailwind.config.ts` — no arbitrary hex values in UI code.\n- Prefer `revalidatePath()` over `router.refresh()` for cache invalidation.\n\nBefore editing, check if the change affects:\n- DB schema → run `npm run db:generate` and apply migrations\n- API routes → update integration tests in `tests/integration/`\n- Server actions → update related component tests\n- UI components → consider E2E test impact",
+      "permission": {
+        "bash": {
+          "npm run db:seed": "allow"
+        }
+      }
     },
 
-    "task": {
+    "researcher": {
       "description": "Fast background executor for pulse-forge — searches, reads, quick analysis.",
       "mode": "subagent",
-      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "model": "openrouter/deepseek/deepseek-v4.1-flash",
       "temperature": 0.0,
       "steps": 8,
       "prompt": "You are a fast task executor for pulse-forge. Read files, search code, analyze structures. Do NOT edit files. Be concise. Reference AGENTS.md for architecture context when needed.",
@@ -85,7 +92,7 @@
     "plan": {
       "description": "Architectural planner for pulse-forge. Analyzes codebase and drafts implementation plans without editing files.",
       "mode": "primary",
-      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "model": "openrouter/z-ai/glm-5.2",
       "reasoningEffort": "high",
       "temperature": 0.0,
       "steps": 15,
@@ -104,55 +111,14 @@
       }
     },
 
-    "build": {
-      "description": "Primary execution agent for pulse-forge. Multi-file editing, test execution, and verification.",
-      "mode": "primary",
-      "model": "openrouter/deepseek/deepseek-v4-flash",
-      "reasoningEffort": "medium",
-      "temperature": 0.0,
-      "steps": 25,
-      "prompt": "You are a Staff Software Engineer executing plans for pulse-forge. You write production-grade, well-tested TypeScript code.\n\nMANDATORY WORKFLOW:\n1. Read AGENTS.md for context and conventions.\n2. Implement the plan file by file.\n3. After EVERY batch of edits, run `npm run check` (lint + typecheck).\n4. For API changes: run `npm run test:integration` and ensure all tests pass.\n5. For UI changes: run `npm run test:e2e` if applicable.\n6. If any test fails, STOP and fix it immediately. Do not proceed until green.\n7. Verify no edge runtime regressions — check `next.config.ts` webpack exclusions if new imports added.\n8. Do not stop until all acceptance criteria from the plan are satisfied.\n\nCONVENTIONS:\n- Strict tenant isolation in all DB queries\n- Hono RPC for typed API calls (`hc<AppType>`)\n- Zod validation for all inputs\n- Server Components for data, Client Components for interactivity\n- Nordic theme tokens from tailwind.config.ts",
-      "permission": {
-        "bash": {
-          "*": "ask",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git branch*": "allow",
-          "git add*": "allow",
-          "git commit*": "allow",
-          "npm test*": "allow",
-          "npm run lint*": "allow",
-          "npm run check": "allow",
-          "npm run typecheck": "allow",
-          "npm run format": "allow",
-          "npm run dev": "allow",
-          "npm run build": "allow",
-          "npm run db:generate": "allow",
-          "npm run db:migrate": "ask",
-          "npm run db:push": "ask",
-          "npm run db:seed": "ask",
-          "npm run test:unit*": "allow",
-          "npm run test:integration*": "allow",
-          "npm run test:e2e*": "ask",
-          "grep *": "allow",
-          "rg *": "allow",
-          "rm *": "deny",
-          "git push --force*": "deny",
-          "git push*": "ask",
-          "sudo *": "deny"
-        }
-      }
-    },
-
     "DB": {
       "description": "Database specialist for pulse-forge. Schema design, migrations, Drizzle ORM queries, seed data.",
       "mode": "subagent",
-      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "model": "openrouter/z-ai/glm-5.2",
       "reasoningEffort": "high",
       "temperature": 0.0,
       "steps": 15,
-      "prompt": "You are the Database Architect for pulse-forge. You specialize in PostgreSQL schema design, Drizzle ORM, and Neon Serverless Postgres.\n\nCRITICAL RULES:\n1. Read `src/db/schema.ts` and `drizzle/*.sql` before any schema change.\n2. All schema changes MUST go through Drizzle Kit: `npm run db:generate` then `npm run db:migrate`.\n3. Maintain the existing multi-tenant pattern: all tables have `tenant_id` with foreign key + cascade delete.\n4. Preserve the unique constraint `(tenant_id, key, environment)` on `feature_flags`.\n5. Add indexes for any new query patterns — justify in comments.\n6. Update `src/db/seed.ts` if new tables/columns affect seed data.\n7. Update integration tests if schema changes break existing queries.\n8. Never use `db:push` in production contexts — migrations only.\n9. Respect the dynamic DB driver in `src/db/index.ts` — schema must work with both `pg` (Node) and `@neondatabase/serverless` (edge).\n\nAfter schema changes, run:\n- `npm run db:generate`\n- `npm run db:migrate`\n- `npm run test:integration`",
+      "prompt": "You are the Database Architect for pulse-forge. You specialize in PostgreSQL schema design, Drizzle ORM, and Neon Serverless Postgres.\n\nCRITICAL RULES:\n1. Read `src/db/schema.ts` and `drizzle/*.sql` before any schema change.\n2. All schema changes MUST go through Drizzle Kit: `npm run db:generate` then `npm run db:migrate`.\n3. Maintain the existing multi-tenant pattern: all tables have `tenant_id` with foreign key + cascade delete.\n4. Preserve the unique constraint `(tenant_id, key, environment)` on `feature_flags`.\n5. Add indexes for any new query patterns — justify in comments.\n6. Update `src/db/seed.ts` if new tables/columns affect seed data.\n7. Update integration tests if schema changes break existing queries.\n8. Never use `db:push` in production contexts — migrations only.\n9. Respect the dynamic DB driver in `src/db/index.ts` — schema must work with both `pg` (Node) and `@neondatabase/serverless` (edge).\n10. Never edit already-applied migration files under `drizzle/*.sql` — generate a new migration instead.\n\nAfter schema changes, run:\n- `npm run db:generate`\n- `npm run db:migrate`\n- `npm run test:integration`",
       "permission": {
         "bash": {
           "*": "ask",
@@ -168,7 +134,7 @@
     "UI": {
       "description": "UI/UX specialist for pulse-forge. React components, Tailwind styling, accessibility, Nordic theme.",
       "mode": "subagent",
-      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "model": "openrouter/deepseek/deepseek-v4.1-flash",
       "reasoningEffort": "medium",
       "temperature": 0.1,
       "steps": 15,
